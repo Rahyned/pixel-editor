@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { exportPng, exportProjectJson, exportSpriteSheet, exportSvg } from "../lib/export.js";
+import { loadImageFromFile, detectSprites } from "../lib/import.js";
 
 export default function ExportImport({
   project,
@@ -14,6 +15,39 @@ export default function ExportImport({
   const spriteText = useRef(null);
   const pngInput = useRef(null);
   const [exactColors, setExactColors] = useState(false);
+  const [autoCrop, setAutoCrop] = useState(true);
+  const [sprites, setSprites] = useState([]);
+  const [selectedSprite, setSelectedSprite] = useState(-1);
+  const [currentImage, setCurrentImage] = useState(null);
+
+  const handleFile = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const img = await loadImageFromFile(f);
+      const det = detectSprites(img);
+      setCurrentImage(img);
+      if (det.length > 1) {
+        setSprites(det);
+        setSelectedSprite(0);
+      } else {
+        // una sola figura: importar directo
+        onImportImage(img, exactColors, autoCrop, null);
+        setSprites([]);
+      }
+    } catch {
+      onImportImage(null, exactColors, autoCrop, null);
+      setSprites([]);
+    }
+    e.target.value = "";
+  };
+
+  const importSelected = () => {
+    if (!currentImage) return;
+    const region = selectedSprite === -1 ? null : sprites[selectedSprite];
+    onImportImage(currentImage, exactColors, autoCrop, region);
+    setSprites([]);
+  };
 
   return (
     <div className="panel export-panel">
@@ -50,23 +84,39 @@ export default function ExportImport({
 
       <h3>Importar imagen (PNG / JPG)</h3>
       <p className="field-hint">
-        Escala la imagen al tamaño del lienzo ({project.size}×{project.size}) y la convierte a la paleta.
+        Detecta figuras separadas automáticamente. Elegí una figura o el conjunto completo.
       </p>
       <label className="check-row">
         <input type="checkbox" checked={exactColors} onChange={(e) => setExactColors(e.target.checked)} />
         Usar colores de la paleta más cercanos
       </label>
+      <label className="check-row">
+        <input type="checkbox" checked={autoCrop} onChange={(e) => setAutoCrop(e.target.checked)} />
+        Recortar bordes transparentes y ajustar
+      </label>
       <input
         ref={pngInput}
         type="file"
         accept="image/*"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          onImportImage(f, exactColors);
-          e.target.value = "";
-        }}
+        onChange={handleFile}
       />
+
+      {sprites.length > 0 && (
+        <div className="sprite-picker">
+          <label>Figuras detectadas ({sprites.length})</label>
+          <select value={selectedSprite} onChange={(e) => setSelectedSprite(Number(e.target.value))}>
+            {sprites.map((s, i) => (
+              <option key={i} value={i}>
+                {s.name} ({s.w}×{s.h})
+              </option>
+            ))}
+            <option value={-1}>Conjunto completo</option>
+          </select>
+          <button className="btn ok" onClick={importSelected}>
+            ⬆ Importar {selectedSprite === -1 ? "todo" : sprites[selectedSprite]?.name.toLowerCase()}
+          </button>
+        </div>
+      )}
 
       <div className="divider" />
 

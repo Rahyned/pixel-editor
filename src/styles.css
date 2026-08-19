@@ -622,6 +622,32 @@ input[type="file"] {
   accent-color: var(--accent);
 }
 
+.sprite-picker {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel2);
+}
+
+.sprite-picker label {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.sprite-picker select {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+
 /* ============ Config row ============ */
 .config-row {
   display: flex;

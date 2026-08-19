@@ -14,7 +14,6 @@ import {
   parseProjectJson,
   parseSpriteText,
   rowsToSpriteGrid,
-  loadImageFromFile,
   imageToGrid,
 } from "./lib/import.js";
 import PixelCanvas from "./components/PixelCanvas.jsx";
@@ -322,11 +321,15 @@ export default function App() {
   );
 
   // --- Importar imagen (PNG/JPG) a la capa activa ---
+  // Recibe la imagen ya cargada (Image) y opcionalmente una región para recortar una figura.
   const handleImportImage = useCallback(
-    async (file, exactColors) => {
+    (img, exactColors, autoCrop = true, region = null) => {
+      if (!img) {
+        flash("✗ No se pudo leer la imagen.");
+        return;
+      }
       try {
-        const img = await loadImageFromFile(file);
-        const grid = imageToGrid(img, project.size, project.palette, exactColors);
+        const grid = imageToGrid(img, project.size, project.palette, exactColors, autoCrop, region);
         p.importGrid(grid);
         flash("✓ Imagen importada en la capa activa.");
       } catch (e) {

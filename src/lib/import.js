@@ -130,15 +130,122 @@ export function nearestPaletteKey(r, g, b, a, palette) {
   return best;
 }
 
+// Lee la imagen en un canvas de su tamaño nativo.
+function loadImageToCanvas(img) {
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+  return canvas;
+}
+
+// Detecta el bounding box del contenido no transparente.
+export function findContentBox(canvas, alphaThreshold = 128) {
+  const { width, height } = canvas;
+  const data = canvas.getContext("2d").getImageData(0, 0, width, height).data;
+  let minX = width, minY = height, maxX = -1, maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const a = data[(y * width + x) * 4 + 3];
+      if (a >= alphaThreshold) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < minX || maxY < minY) return null;
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+// Detecta figuras separadas (sprites individuales) en una imagen.
+// Divide por columnas sin píxeles opacos (para sprites en fila horizontal).
+// Devuelve array de { x, y, w, h, name }.
+export function detectSprites(img, alphaThreshold = 128) {
+  const canvas = img.getContext ? img : loadImageToCanvas(img);
+  const { width, height } = canvas;
+  const data = canvas.getContext("2d").getImageData(0, 0, width, height).data;
+
+  // columna x es "ocupada" si tiene >=1 píxel opaco
+  const colOcc = Array.from({ length: width }, () => false);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      if (data[(y * width + x) * 4 + 3] >= alphaThreshold) {
+        colOcc[x] = true;
+        break;
+      }
+    }
+  }
+  // agrupar columnas ocupadas consecutivas
+  const groups = [];
+  let start = -1;
+  for (let x = 0; x <= width; x++) {
+    const occupied = x < width && colOcc[x];
+    if (occupied && start === -1) start = x;
+    else if (!occupied && start !== -1) {
+      groups.push({ start, end: x - 1 });
+      start = -1;
+    }
+  }
+  // para cada grupo, encontrar el bounding box vertical real
+  return groups.map((g, i) => {
+    let minY = height, maxY = -1;
+    for (let y = 0; y < height; y++) {
+      for (let x = g.start; x <= g.end; x++) {
+        if (data[(y * width + x) * 4 + 3] >= alphaThreshold) {
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    return {
+      x: g.start,
+      y: minY,
+      w: g.end - g.start + 1,
+      h: maxY - minY + 1,
+      name: `Figura ${i + 1}`,
+    };
+  });
+}
+
+// Dibuja una región específica de una imagen escalada al target (sin distorsión, centrada).
+export function drawRegionScaled(ctx, srcCanvas, region, targetW, targetH) {
+  const scale = Math.min(targetW / region.w, targetH / region.h);
+  const drawW = Math.round(region.w * scale);
+  const drawH = Math.round(region.h * scale);
+  const ox = Math.round((targetW - drawW) / 2);
+  const oy = Math.round((targetH - drawH) / 2);
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, targetW, targetH);
+  ctx.drawImage(srcCanvas, region.x, region.y, region.w, region.h, ox, oy, drawW, drawH);
+}
+
+// Escala un contenido recortado al tamaño del lienzo (sin distorsionar, encaja en el centro).
+function drawScaledInto(ctx, srcCanvas, targetW, targetH) {
+  const box = findContentBox(srcCanvas);
+  if (!box) return;
+  drawRegionScaled(ctx, srcCanvas, box, targetW, targetH);
+}
+
 // Mapea una imagen a una grilla de claves de paleta de size×size.
-export function imageToGrid(img, size, palette, exactColors = false) {
+// - autoCrop: recorta bordes transparentes y ajusta
+// - region: si se pasa {x,y,w,h}, importa solo esa región (recorte de una figura)
+export function imageToGrid(img, size, palette, exactColors = false, autoCrop = true, region = null) {
+  const src = loadImageToCanvas(img);
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
-  // escalar (con filtro) y luego muestrear
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(img, 0, 0, size, size);
+  if (region) {
+    drawRegionScaled(ctx, src, region, size, size);
+  } else if (autoCrop) {
+    drawScaledInto(ctx, src, size, size);
+  } else {
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(src, 0, 0, size, size);
+  }
   const data = ctx.getImageData(0, 0, size, size).data;
   const grid = Array(size * size).fill(".");
 
