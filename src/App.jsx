@@ -10,7 +10,13 @@ import {
   flipGridH,
   flipGridV,
 } from "./lib/tools.js";
-import { parseProjectJson, parseSpriteText, rowsToSpriteGrid } from "./lib/import.js";
+import {
+  parseProjectJson,
+  parseSpriteText,
+  rowsToSpriteGrid,
+  loadImageFromFile,
+  imageToGrid,
+} from "./lib/import.js";
 import PixelCanvas from "./components/PixelCanvas.jsx";
 import Toolbar from "./components/Toolbar.jsx";
 import Palette from "./components/Palette.jsx";
@@ -315,6 +321,21 @@ export default function App() {
     [project.size, p, flash]
   );
 
+  // --- Importar imagen (PNG/JPG) a la capa activa ---
+  const handleImportImage = useCallback(
+    async (file, exactColors) => {
+      try {
+        const img = await loadImageFromFile(file);
+        const grid = imageToGrid(img, project.size, project.palette, exactColors);
+        p.importGrid(grid);
+        flash("✓ Imagen importada en la capa activa.");
+      } catch (e) {
+        flash("✗ " + e.message);
+      }
+    },
+    [project.size, project.palette, p, flash]
+  );
+
   // --- Cargar JSON ---
   const handleLoadJson = useCallback(
     (text) => {
@@ -480,6 +501,7 @@ export default function App() {
             onScaleChange={setScale}
             onLoadJson={handleLoadJson}
             onImportSprite={handleImportSprite}
+            onImportImage={handleImportImage}
           />
         </aside>
       </div>

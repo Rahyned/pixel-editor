@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { exportPng, exportProjectJson, exportSpriteSheet, exportSvg } from "../lib/export.js";
 
 export default function ExportImport({
@@ -8,9 +8,12 @@ export default function ExportImport({
   onScaleChange,
   onLoadJson,
   onImportSprite,
+  onImportImage,
 }) {
   const jsonInput = useRef(null);
   const spriteText = useRef(null);
+  const pngInput = useRef(null);
+  const [exactColors, setExactColors] = useState(false);
 
   return (
     <div className="panel export-panel">
@@ -42,6 +45,28 @@ export default function ExportImport({
           onChange={(e) => onScaleChange(Number(e.target.value) || 8)}
         />
       </div>
+
+      <div className="divider" />
+
+      <h3>Importar imagen (PNG / JPG)</h3>
+      <p className="field-hint">
+        Escala la imagen al tamaño del lienzo ({project.size}×{project.size}) y la convierte a la paleta.
+      </p>
+      <label className="check-row">
+        <input type="checkbox" checked={exactColors} onChange={(e) => setExactColors(e.target.checked)} />
+        Usar colores de la paleta más cercanos
+      </label>
+      <input
+        ref={pngInput}
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          onImportImage(f, exactColors);
+          e.target.value = "";
+        }}
+      />
 
       <div className="divider" />
 

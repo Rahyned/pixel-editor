@@ -83,3 +83,91 @@ function sanitizeGrid(grid, size) {
   }
   return flat;
 }
+
+// ============================================================
+// IMPORTACIÓN DE IMAGEN (PNG / cualquier formato soportado)
+// Redimensiona la imagen al tamaño del lienzo y mapea cada
+// píxel al color de paleta más cercano (o usa el color exacto
+// si el usuario elige "colores exactos").
+// ============================================================
+
+// Convierte un archivo de imagen en un Image.
+export function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("No se pudo leer la imagen."));
+    };
+    img.src = url;
+  });
+}
+
+// Encuentra la clave de paleta más cercana a un color RGBA.
+export function nearestPaletteKey(r, g, b, a, palette) {
+  if (a < 128) return ".";
+  let best = null;
+  let bestDist = Infinity;
+  for (const k of Object.keys(palette)) {
+    const hex = palette[k];
+    const pr = parseInt(hex.slice(1, 3), 16);
+    const pg = parseInt(hex.slice(3, 5), 16);
+    const pb = parseInt(hex.slice(5, 7), 16);
+    const dr = pr - r;
+    const dg = pg - g;
+    const db = pb - b;
+    const dist = dr * dr + dg * dg + db * db;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = k;
+    }
+  }
+  return best;
+}
+
+// Mapea una imagen a una grilla de claves de paleta de size×size.
+export function imageToGrid(img, size, palette, exactColors = false) {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  // escalar (con filtro) y luego muestrear
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(img, 0, 0, size, size);
+  const data = ctx.getImageData(0, 0, size, size).data;
+  const grid = Array(size * size).fill(".");
+
+  // Para modo exacto: mapa de color exacto -> clave
+  const exactMap = new Map();
+  for (const k of Object.keys(palette)) {
+    exactMap.set(palette[k].toUpperCase(), k);
+  }
+
+  for (let i = 0; i < size * size; i++) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    const a = data[i * 4 + 3];
+    if (a < 128) {
+      grid[i] = ".";
+      continue;
+    }
+    if (exactColors) {
+      const hex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+      const k = exactMap.get(hex);
+      if (k && k !== ".") {
+        grid[i] = k;
+        continue;
+      }
+      grid[i] = nearestPaletteKey(r, g, b, a, palette);
+    } else {
+      grid[i] = nearestPaletteKey(r, g, b, a, palette);
+    }
+  }
+  return grid;
+}
