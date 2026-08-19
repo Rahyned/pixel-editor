@@ -1,19 +1,46 @@
 # 🧷 Pixel Sprite Editor
 
-Editor de sprites pixel art en React + Vite. Pintá, espejá, importá, exportá PNG y generá código JS listo para pegar en tus proyectos.
+Editor de sprites pixel art en React + Vite. Pintá, animá, importá y exportá sprites para tus proyectos: PNG, sprite-sheet, SVG, JSON y código JS listo para pegar.
 
 ## ✨ Funcionalidades
 
-- **Pintado** con click / arrastre, **click derecho o espacio** para borrar
-- **Zoom** con la rueda del mouse sobre el canvas
-- **Tamaños** 16 / 32 / 48 / 64 px
-- **Undo / Redo** (Ctrl+Z / Ctrl+Y + botones)
-- **Espejo** horizontal y vertical para figuras simétricas
-- **Importar** sprites existentes pegando el array `P([...])`
-- **Exportar PNG** con escala configurable
+### Herramientas
+- **Pincel** (click = pintar) · **Borrador** (click derecho o Space) · **Relleno** (flood fill) · **Cuentagotas** · **Línea** · **Rectángulo** · **Elipse** (con toggle relleno/contorno) · **Selección** (mover, copiar/pegar/cortar)
+- Zoom con la rueda del mouse, botones +/− y ajuste al panel
+
+### Capas
+- Añadir, eliminar, renombrar, reordenar, **ocultar/mostrar** y **opacidad por capa (0-100%)**
+
+### Frames animados
+- Línea de tiempo: nuevo, duplicar, eliminar, reordenar
+- **Preview animada** en loop con control de velocidad (fps)
+- Export **sprite-sheet** (todos los frames en tira)
+
+### Edición
+- **Tamaños**: 8 / 16 / 24 / 32 / 48 / 64 (conserva el contenido al cambiar, recortando desde arriba-izquierda)
+- **Undo / Redo** (Ctrl+Z / Ctrl+Y)
+- **Rotar** 90° y **voltear** horizontal/vertical
+- **Paleta editable**: redefine el color de cada clave con un selector hex
+- **Selección** con portapapeles entre frames (Ctrl+C/X/V, Del, Escape)
+
+### Guardado / Exportación
+- **PNG** del frame activo · **Sprite-sheet PNG** · **SVG** vectorial
+- **JSON** de proyecto completo (frames + capas + paleta) + carga
+- **Importar** sprites `P([...])` a la capa activa
 - **Guardado automático** del borrador en LocalStorage
-- **Generador de código** que emite `export const X = P([...])`
-- Atajos de teclado: `1-9` eligen color, `Space` borrador
+- **Generador de código** `export const X = P([...])` (avisa si la paleta es custom)
+
+## 🎮 Atajos de teclado
+
+| Atajo | Acción |
+|-------|--------|
+| `1-9` | elegir color |
+| `B` / `E` / `G` / `I` / `L` / `R` / `O` / `S` | Pincel / Borrador / Relleno / Cuentagotas / Línea / Rect / Elipse / Selección |
+| `Space` | Borrador |
+| `Ctrl+Z` / `Ctrl+Y` | Deshacer / Rehacer |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copiar / Cortar / Pegar selección |
+| `Del` | Borrar selección |
+| `Esc` | Cancelar selección |
 
 ## 🚀 Ejecutar
 
@@ -37,7 +64,7 @@ URL: https://rahyned.github.io/pixel-editor/
 
 ## 🎨 Paleta
 
-Misma paleta que el portafolio (`src/sprites/palette.js`):
+Paleta por defecto (editable en el editor):
 
 | Clave | Color | | Clave | Color |
 |-------|-------|-|-------|-------|
@@ -50,5 +77,29 @@ Misma paleta que el portafolio (`src/sprites/palette.js`):
 | `Y` | amarillo | | `T` | marrón |
 | `A` | cian | | `H` | marrón claro |
 | `E` | gris | | `F` | gris claro |
+
+## 📁 Estructura
+
+```
+src/
+├── App.jsx               # layout + estado global + atajos
+├── components/
+│   ├── PixelCanvas.jsx   # canvas con herramientas, zoom y selección
+│   ├── Toolbar.jsx       # herramientas, tamaño, transformaciones, undo
+│   ├── Palette.jsx       # paleta editable
+│   ├── LayersPanel.jsx   # capas + opacidad
+│   ├── FramesPanel.jsx   # línea de tiempo + animación
+│   ├── Preview.jsx       # preview animada
+│   ├── CodeOutput.jsx    # generador de código
+│   └── ExportImport.jsx  # export PNG/sheet/SVG/JSON + import
+├── lib/
+│   ├── palette.js        # claves de color + helpers de grilla
+│   ├── composite.js      # fusión de capas con opacidad
+│   ├── tools.js          # matemática de herramientas y transformaciones
+│   ├── export.js         # PNG, sprite-sheet, SVG, JSON
+│   └── import.js         # parseo de sprites y proyectos JSON
+└── state/
+    └── useProject.js     # estado + historial undo/redo
+```
 
 © 2026 Lautaro | Diseño & código custom

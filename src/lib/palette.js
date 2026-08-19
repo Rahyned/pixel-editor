@@ -28,6 +28,18 @@ export const PX = {
 // Orden de la paleta visual (excluye transparente)
 export const PX_ORDER = ["K", "W", "R", "O", "G", "Y", "N", "L", "B", "C", "P", "V", "T", "H", "E", "F", "A"];
 
+export const DEFAULT_PALETTE = PX_ORDER.reduce((acc, k) => ((acc[k] = PX[k]), acc), {});
+
+export function isDefaultPalette(palette) {
+  return PX_ORDER.every((k) => palette[k] === PX[k]);
+}
+
+export function clonePalette(palette) {
+  const out = {};
+  for (const k of Object.keys(palette)) out[k] = palette[k];
+  return out;
+}
+
 // Convierte un array de filas de texto en una grilla de claves plana.
 export const rowsToGrid = (rows, size) => {
   const grid = Array(size * size).fill(".");
