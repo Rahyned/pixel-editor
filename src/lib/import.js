@@ -22,17 +22,23 @@ export function parseSpriteText(text) {
 }
 
 // Convierte filas de texto a grilla del ancho dado (valida paleta).
-export function rowsToSpriteGrid(rows, width) {
+// Todas las filas deben tener la misma longitud. Devuelve { grid, width, height }.
+export function rowsToSpriteGrid(rows) {
   const valid = new Set(Object.keys(PX));
+  if (rows.length === 0) throw new Error("No hay filas en el sprite.");
+  const width = rows[0].length;
   for (const row of rows) {
     if (row.length !== width) {
-      throw new Error(`Cada fila debe tener ${width} chars (una fila tiene ${row.length}).`);
+      throw new Error(
+        `Todas las filas deben tener la misma longitud (una fila tiene ${row.length}, otra ${width}).`
+      );
     }
     for (const ch of row) {
       if (!valid.has(ch)) throw new Error(`Carácter inválido: '${ch}'. ¿Es de la paleta?`);
     }
   }
-  return rowsToGrid(rows, width);
+  const height = rows.length;
+  return { grid: rowsToGrid(rows, width), width, height };
 }
 
 // Carga un proyecto completo desde JSON. Devuelve objeto validado.

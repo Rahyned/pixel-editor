@@ -27,9 +27,13 @@ export default function Toolbar({
   canUndo,
   canRedo,
   onReset,
-  fillShapes,
+    fillShapes,
   onFillShapesChange,
 }) {
+  const sizeOptions = (current) => {
+    const opts = sizes.includes(current) ? sizes : [...sizes, current].sort((a, b) => a - b);
+    return opts;
+  };
   return (
     <div className="panel toolbar-panel">
       <div className="toolbar-row">
@@ -40,6 +44,8 @@ export default function Toolbar({
               className={"btn tool" + (tool === t.id ? " active" : "")}
               onClick={() => onToolChange(t.id)}
               title={`${t.label} (${t.key})`}
+
+
             >
               <span className="tool-icon">{t.icon}</span>
               <span className="tool-label">{t.label}</span>
@@ -50,7 +56,7 @@ export default function Toolbar({
         <div className="tool-group size-group">
           <label>Ancho</label>
           <select value={width} onChange={(e) => onWidthChange(Number(e.target.value))}>
-            {sizes.map((s) => (
+            {sizeOptions(width).map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -58,7 +64,7 @@ export default function Toolbar({
           </select>
           <label>× Alto</label>
           <select value={height} onChange={(e) => onHeightChange(Number(e.target.value))}>
-            {sizes.map((s) => (
+            {sizeOptions(height).map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

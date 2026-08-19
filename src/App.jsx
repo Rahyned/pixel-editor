@@ -317,14 +317,17 @@ export default function App() {
     (text) => {
       try {
         const rows = parseSpriteText(text);
-        const grid = rowsToSpriteGrid(rows, project.width);
+        const { grid, width, height } = rowsToSpriteGrid(rows);
+        // ajustar el lienzo al tamaño del sprite pegado (igual que el importador de imágenes)
+        p.setDimensions(width, height);
+        setSelection(null);
         p.importGrid(grid);
-        flash("✓ Sprite importado en la capa activa.");
+        flash(`✓ Sprite importado en la capa activa (${width}x${height}).`);
       } catch (e) {
         flash("✗ " + e.message);
       }
     },
-    [project.width, p, flash]
+    [p, flash]
   );
 
   // --- Importar imagen (PNG/JPG) a la capa activa ---
