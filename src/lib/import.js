@@ -112,9 +112,25 @@ export function loadImageFromFile(file) {
   });
 }
 
-// Encuentra la clave de paleta más cercana a un color RGBA.
+// Convierte RGB a matiz (hue) en grados. Devuelve -1 si es gris (sin tono).
+function rgbToHue(r, g, b) {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d === 0) return -1;
+  let h;
+  if (max === r) h = ((g - b) / d) % 6;
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return h * 60;
+}
+
+// Encuentra la clave de paleta más cercana a un color RGBA, priorizando el
+// tono para que un color saturado (p.ej. azul) no caiga en un gris.
 export function nearestPaletteKey(r, g, b, a, palette) {
   if (a < 128) return ".";
+  const sat = (Math.max(r, g, b) - Math.min(r, g, b)) / 255;
+  const pHue = rgbToHue(r, g, b);
   let best = null;
   let bestDist = Infinity;
   for (const k of Object.keys(palette)) {
@@ -125,7 +141,19 @@ export function nearestPaletteKey(r, g, b, a, palette) {
     const dr = pr - r;
     const dg = pg - g;
     const db = pb - b;
-    const dist = dr * dr + dg * dg + db * db;
+    let dist = dr * dr + dg * dg + db * db;
+    if (sat > 0.15 && pHue >= 0) {
+      const candSat = (Math.max(pr, pg, pb) - Math.min(pr, pg, pb)) / 255;
+      const candHue = rgbToHue(pr, pg, pb);
+      if (candHue < 0 || candSat < 0.1) {
+        // candidato gris: penalizar para no "apagar" el color
+        dist *= 4;
+      } else {
+        let hd = Math.abs(pHue - candHue);
+        if (hd > 180) hd = 360 - hd;
+        dist += hd * hd * 5;
+      }
+    }
     if (dist < bestDist) {
       bestDist = dist;
       best = k;

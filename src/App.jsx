@@ -542,7 +542,7 @@ export default function App() {
 
           <Preview project={{ ...project, playing, playingFps: fps }} scale={scale} />
 
-          <CodeOutput project={project} name={name} emoji={emoji} />
+          <CodeOutput project={project} name={name} emoji={emoji} selection={selection} />
 
           <ExportImport
             project={project}
@@ -552,6 +552,7 @@ export default function App() {
             onLoadJson={handleLoadJson}
             onImportSprite={handleImportSprite}
             onImportImage={handleImportImage}
+            selection={selection}
           />
         </aside>
       </div>

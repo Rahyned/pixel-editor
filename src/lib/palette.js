@@ -39,12 +39,24 @@ export const PX = {
   "&": "#F5DEB3", // trigo / crema
   "#": "#555555", // gris medio
   "@": "#C0C0C0", // plata
+  // --- escala de grises (claves 0-4) ---
+  "0": "#2B2B33", // gris muy oscuro
+  "1": "#3D3D47", // gris oscuro
+  "2": "#4F4F5C", // gris medio-oscuro
+  "3": "#7C7C8C", // gris medio
+  "4": "#A6A6B4", // gris claro
+  // --- azules medios (claves 5-8) ---
+  "5": "#34517A", // azul medio oscuro
+  "6": "#3E5E8C", // azul medio
+  "7": "#54769F", // azul medio claro
+  "8": "#6B8CB5", // azul medio claro 2
 };
 
 // Orden de la paleta visual (excluye transparente)
 export const PX_ORDER = [
   "K", "W", "R", "O", "G", "Y", "N", "L", "B", "C", "P", "V", "T", "H", "E", "F", "A",
   "D", "I", "J", "Q", "U", "M", "X", "Z", "S", "%", "!", "$", "&", "#", "@",
+  "0", "1", "2", "3", "4", "5", "6", "7", "8",
 ];
 
 export const DEFAULT_PALETTE = PX_ORDER.reduce((acc, k) => ((acc[k] = PX[k]), acc), {});

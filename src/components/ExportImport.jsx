@@ -1,5 +1,12 @@
 import { useRef, useState } from "react";
-import { exportPng, exportProjectJson, exportSpriteSheet, exportSvg } from "../lib/export.js";
+import {
+  exportPng,
+  exportPngSelection,
+  exportProjectJson,
+  exportSpriteSheet,
+  exportSvg,
+  exportSvgSelection,
+} from "../lib/export.js";
 import { loadImageFromFile, detectSprites } from "../lib/import.js";
 
 export default function ExportImport({
@@ -10,6 +17,7 @@ export default function ExportImport({
   onLoadJson,
   onImportSprite,
   onImportImage,
+  selection,
 }) {
   const jsonInput = useRef(null);
   const spriteText = useRef(null);
@@ -54,14 +62,28 @@ export default function ExportImport({
       <h2>Exportar / Importar</h2>
 
       <div className="export-buttons">
-        <button className="btn ok" onClick={() => exportPng(project, scale, name)}>
-          🖼 PNG frame
+        <button
+          className="btn ok"
+          onClick={() =>
+            selection && selection.w > 0
+              ? exportPngSelection(project, scale, name, selection)
+              : exportPng(project, scale, name)
+          }
+        >
+          🖼 {selection && selection.w > 0 ? "PNG selección" : "PNG frame"}
         </button>
         <button className="btn ok" onClick={() => exportSpriteSheet(project, scale, name)}>
           🎞 Sprite-sheet
         </button>
-        <button className="btn ok" onClick={() => exportSvg(project, name)}>
-          📐 SVG
+        <button
+          className="btn ok"
+          onClick={() =>
+            selection && selection.w > 0
+              ? exportSvgSelection(project, name, selection)
+              : exportSvg(project, name)
+          }
+        >
+          📐 {selection && selection.w > 0 ? "SVG selección" : "SVG"}
         </button>
         <button className="btn ok" onClick={() => exportProjectJson(project, name)}>
           💾 Guardar JSON

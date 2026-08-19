@@ -21,8 +21,8 @@ Editor de sprites pixel art en React + Vite. Pintá, animá, importá y exportá
 - **Tamaños**: 8 / 16 / 24 / 32 / 48 / 64 / 96 / 128 / 192 / 256 (conserva el contenido al cambiar)
 - **Undo / Redo** (Ctrl+Z / Ctrl+Y)
 - **Rotar** 90° y **voltear** horizontal/vertical
-- **Paleta editable**: redefine el color de cada clave con un selector hex
-- **Selección** con portapapeles entre frames (Ctrl+C/X/V, Del, Escape)
+- **Paleta editable**: redefine el color de cada clave con un selector hex. Incluye escala de grises (claves `0-4`) y azules medios (`5-8`) para sprites oscuros/medios.
+- **Selección** con portapapeles entre frames (Ctrl+C/X/V, Del, Escape). Con un área seleccionada, el **código JS, PNG y SVG se generan solo de la selección** recortada.
 
 ### Guardado / Exportación
 - **PNG** del frame activo · **Sprite-sheet PNG** · **SVG** vectorial
@@ -79,6 +79,8 @@ Paleta por defecto (editable en el editor):
 | `Y` | amarillo | | `T` | marrón |
 | `A` | cian | | `H` | marrón claro |
 | `E` | gris | | `F` | gris claro |
+
+Además incluye escala de grises (`0`-`4`) y azules medios (`5`-`8`).
 
 ## 📁 Estructura
 
