@@ -18,15 +18,15 @@ function safeName(name) {
 }
 
 // Dibuja un frame compuesto en un canvas a la escala dada.
-export function drawFrameToCanvas(frame, size, scale) {
+export function drawFrameToCanvas(frame, width, height, scale) {
   const canvas = document.createElement("canvas");
-  canvas.width = size * scale;
-  canvas.height = size * scale;
+  canvas.width = width * scale;
+  canvas.height = height * scale;
   const ctx = canvas.getContext("2d");
-  const { colors } = composeFrame(frame, size);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const c = colors[y * size + x];
+  const { colors } = composeFrame(frame, width, height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const c = colors[y * width + x];
       if (!c || c[3] === 0) continue;
       ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`;
       ctx.fillRect(x * scale, y * scale, scale, scale);
@@ -38,7 +38,7 @@ export function drawFrameToCanvas(frame, size, scale) {
 // PNG de un frame.
 export function exportPng(project, scale, name) {
   const frame = project.frames[project.activeFrame];
-  const canvas = drawFrameToCanvas(frame, project.size, scale);
+  const canvas = drawFrameToCanvas(frame, project.width, project.height, scale);
   canvas.toBlob((blob) => {
     download(blob, `${safeName(name)}-f${project.activeFrame + 1}.png`);
   }, "image/png");
@@ -46,14 +46,14 @@ export function exportPng(project, scale, name) {
 
 // PNG sprite-sheet: todos los frames en una tira horizontal.
 export function exportSpriteSheet(project, scale, name) {
-  const { size, frames } = project;
+  const { width, height, frames } = project;
   const canvas = document.createElement("canvas");
-  canvas.width = size * scale * frames.length;
-  canvas.height = size * scale;
+  canvas.width = width * scale * frames.length;
+  canvas.height = height * scale;
   const ctx = canvas.getContext("2d");
   frames.forEach((frame, fi) => {
-    const fc = drawFrameToCanvas(frame, size, scale);
-    ctx.drawImage(fc, fi * size * scale, 0);
+    const fc = drawFrameToCanvas(frame, width, height, scale);
+    ctx.drawImage(fc, fi * width * scale, 0);
   });
   canvas.toBlob((blob) => {
     download(blob, `${safeName(name)}-sheet.png`);
@@ -63,12 +63,12 @@ export function exportSpriteSheet(project, scale, name) {
 // SVG vectorial del frame activo (respetando opacidad de capas).
 export function exportSvg(project, name) {
   const frame = project.frames[project.activeFrame];
-  const { size } = project;
-  const { colors } = composeFrame(frame, size);
+  const { width, height } = project;
+  const { colors } = composeFrame(frame, width, height);
   const rects = [];
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const c = colors[y * size + x];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const c = colors[y * width + x];
       if (!c || c[3] === 0) continue;
       const fill = `rgba(${c[0]},${c[1]},${c[2]},${(c[3] / 255).toFixed(3)})`;
       rects.push(
@@ -76,15 +76,15 @@ export function exportSvg(project, name) {
       );
     }
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" shape-rendering="crispEdges" viewBox="0 0 ${size} ${size}">${rects.join("")}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" shape-rendering="crispEdges" viewBox="0 0 ${width} ${height}">${rects.join("")}</svg>`;
   download(new Blob([svg], { type: "image/svg+xml" }), `${safeName(name)}-f${project.activeFrame + 1}.svg`);
 }
 
 // JSON de proyecto completo (frames + capas + paleta + tamaño).
 export function projectToJson(project) {
-  const { size, palette, frames, activeFrame, activeLayer } = project;
+  const { width, height, palette, frames, activeFrame, activeLayer } = project;
   return JSON.stringify(
-    { size, palette, activeFrame, activeLayer, frames },
+    { width, height, palette, activeFrame, activeLayer, frames },
     null,
     2
   );

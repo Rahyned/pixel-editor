@@ -17,7 +17,8 @@ Editor de sprites pixel art en React + Vite. Pintá, animá, importá y exportá
 - Export **sprite-sheet** (todos los frames en tira)
 
 ### Edición
-- **Tamaños**: 8 / 16 / 24 / 32 / 48 / 64 (conserva el contenido al cambiar, recortando desde arriba-izquierda)
+- **Lienzo rectangular**: ancho y alto separados (8 → 256) para sprites alargados
+- **Tamaños**: 8 / 16 / 24 / 32 / 48 / 64 / 96 / 128 / 192 / 256 (conserva el contenido al cambiar)
 - **Undo / Redo** (Ctrl+Z / Ctrl+Y)
 - **Rotar** 90° y **voltear** horizontal/vertical
 - **Paleta editable**: redefine el color de cada clave con un selector hex
@@ -26,7 +27,7 @@ Editor de sprites pixel art en React + Vite. Pintá, animá, importá y exportá
 ### Guardado / Exportación
 - **PNG** del frame activo · **Sprite-sheet PNG** · **SVG** vectorial
 - **JSON** de proyecto completo (frames + capas + paleta) + carga
-- **Importar imágenes (PNG/JPG)**: detecta figuras separadas automáticamente y deja elegir cuál importar (ideal para sprites con varias figuras en una imagen). Con opciones de recorte de bordes transparentes y ajuste.
+- **Importar imágenes (PNG/JPG)**: detecta figuras separadas automáticamente y deja elegir cuál importar. Al elegir una figura, **el lienzo se ajusta a su proporción** (sin distorsión) para que el dibujo no se pierda. Con opciones de recorte de bordes transparentes y ajuste.
 - **Importar** sprites `P([...])` a la capa activa
 - **Guardado automático** del borrador en LocalStorage
 - **Generador de código** `export const X = P([...])` (avisa si la paleta es custom)

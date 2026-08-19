@@ -1,27 +1,28 @@
 import { useCallback, useRef, useState } from "react";
 import { clonePalette, DEFAULT_PALETTE } from "../lib/palette.js";
-import { resizeGrid } from "../lib/tools.js";
+import { resizeGrid, rotateGridCW, rotateGridCCW } from "../lib/tools.js";
 
 const MAX_HISTORY = 60;
-const SIZES = [8, 16, 24, 32, 48, 64];
+const SIZES = [8, 16, 24, 32, 48, 64, 96, 128, 192, 256];
 
-function emptyGrid(size) {
-  return Array(size * size).fill(".");
+function emptyGrid(w, h) {
+  return Array(w * h).fill(".");
 }
 
-function makeLayer(size, name) {
-  return { name, visible: true, opacity: 1, grid: emptyGrid(size) };
+function makeLayer(w, h, name) {
+  return { name, visible: true, opacity: 1, grid: emptyGrid(w, h) };
 }
 
-function makeFrame(size) {
-  return { layers: [makeLayer(size, "Capa 1")] };
+function makeFrame(w, h) {
+  return { layers: [makeLayer(w, h, "Capa 1")] };
 }
 
-function makeProject(size) {
+function makeProject(w, h) {
   return {
-    size,
+    width: w,
+    height: h,
     palette: clonePalette(DEFAULT_PALETTE),
-    frames: [makeFrame(size)],
+    frames: [makeFrame(w, h)],
     activeFrame: 0,
     activeLayer: 0,
   };
@@ -31,7 +32,7 @@ function makeProject(size) {
 function withActiveLayerGrid(project, fn) {
   const frame = project.frames[project.activeFrame];
   const layers = frame.layers.map((l, i) =>
-    i === project.activeLayer ? { ...l, grid: fn(l.grid) } : l
+    i === project.activeLayer ? { ...l, grid: fn(l.grid, project.width, project.height) } : l
   );
   const frames = project.frames.map((f, i) =>
     i === project.activeFrame ? { ...f, layers } : f
@@ -39,9 +40,9 @@ function withActiveLayerGrid(project, fn) {
   return { ...project, frames };
 }
 
-export function useProject(initialSize = 16) {
+export function useProject(initialW = 16, initialH = 16) {
   const [state, setState] = useState(() => ({
-    project: makeProject(initialSize),
+    project: makeProject(initialW, initialH),
     history: [],
     future: [],
   }));
@@ -52,16 +53,17 @@ export function useProject(initialSize = 16) {
   const activeFrame = project.frames[project.activeFrame];
   const activeLayer = activeFrame.layers[project.activeLayer];
 
-  const commit = useCallback((next, { keepHistory = false } = {}) => {
-    setState((s) =>
-      keepHistory
+  const commit = useCallback((nextOrFn, { keepHistory = false } = {}) => {
+    setState((s) => {
+      const next = typeof nextOrFn === "function" ? nextOrFn(s.project) : nextOrFn;
+      return keepHistory
         ? { ...s, project: next }
         : {
             project: next,
             history: [...s.history.slice(-(MAX_HISTORY - 1)), s.project],
             future: [],
-          }
-    );
+          };
+    });
   }, []);
 
   // --- Stroke de pintado (agrupa drags en un solo undo) ---
@@ -109,9 +111,9 @@ export function useProject(initialSize = 16) {
   // --- Acciones sobre la capa activa (commit inmediato) ---
   const applyGrid = useCallback(
     (fn) => {
-      commit(withActiveLayerGrid(project, fn));
+      commit((sProj) => withActiveLayerGrid(sProj, fn));
     },
-    [project, commit]
+    [commit]
   );
 
   const setCell = useCallback(
@@ -126,12 +128,12 @@ export function useProject(initialSize = 16) {
   );
 
   const clearLayer = useCallback(() => {
-    applyGrid(() => emptyGrid(project.size));
-  }, [applyGrid, project.size]);
+    applyGrid((g, w, h) => emptyGrid(w, h));
+  }, [applyGrid]);
 
   const transformLayer = useCallback(
-    (fn) => applyGrid((g) => fn(g, project.size)),
-    [applyGrid, project.size]
+    (fn) => applyGrid((g, w, h) => fn(g, w, h)),
+    [applyGrid]
   );
 
   // --- Capas ---
@@ -140,7 +142,7 @@ export function useProject(initialSize = 16) {
       ...project,
       frames: project.frames.map((f, fi) =>
         fi === project.activeFrame
-          ? { ...f, layers: [...f.layers, makeLayer(project.size, `Capa ${f.layers.length + 1}`)] }
+          ? { ...f, layers: [...f.layers, makeLayer(project.width, project.height, `Capa ${f.layers.length + 1}`)] }
           : f
       ),
     });
@@ -197,7 +199,9 @@ export function useProject(initialSize = 16) {
   // --- Frames ---
   const addFrame = useCallback(
     (duplicate = false) => {
-      const newFrame = duplicate ? JSON.parse(JSON.stringify(activeFrame)) : makeFrame(project.size);
+      const newFrame = duplicate
+        ? JSON.parse(JSON.stringify(activeFrame))
+        : makeFrame(project.width, project.height);
       commit({
         ...project,
         activeFrame: project.frames.length,
@@ -227,16 +231,39 @@ export function useProject(initialSize = 16) {
   );
 
   // --- Tamaño (conserva contenido recortando/padeando desde arriba-izquierda) ---
-  const setSize = useCallback(
-    (size) => {
-      if (size === project.size) return;
-      const frames = project.frames.map((f) => ({
-        ...f,
-        layers: f.layers.map((l) => ({ ...l, grid: resizeGrid(l.grid, project.size, size) })),
-      }));
-      commit({ ...project, size, frames });
+  const setDimensions = useCallback(
+    (w, h) => {
+      commit((sProj) => {
+        if (w === sProj.width && h === sProj.height) return sProj;
+        const frames = sProj.frames.map((f) => ({
+          ...f,
+          layers: f.layers.map((l) => ({
+            ...l,
+            grid: resizeGrid(l.grid, sProj.width, sProj.height, w, h),
+          })),
+        }));
+        return { ...sProj, width: w, height: h, frames };
+      });
     },
-    [project, commit]
+    [commit]
+  );
+
+  // --- Rotar 90°: transforma cada capa (w×h -> h×w) y actualiza dimensiones ---
+  const rotate = useCallback(
+    (dir) => {
+      commit((sProj) => {
+        const fn = dir === "cw" ? rotateGridCW : rotateGridCCW;
+        const frames = sProj.frames.map((f) => ({
+          ...f,
+          layers: f.layers.map((l) => ({
+            ...l,
+            grid: fn(l.grid, sProj.width, sProj.height),
+          })),
+        }));
+        return { ...sProj, width: sProj.height, height: sProj.width, frames };
+      });
+    },
+    [commit]
   );
 
   // --- Paleta ---
@@ -254,9 +281,9 @@ export function useProject(initialSize = 16) {
   // --- Importar grilla completa al frame/capa activos ---
   const importGrid = useCallback(
     (grid) => {
-      commit(withActiveLayerGrid(project, () => grid.slice()));
+      commit((sProj) => withActiveLayerGrid(sProj, () => grid.slice()));
     },
-    [project, commit]
+    [commit]
   );
 
   // --- Cargar proyecto completo ---
@@ -303,11 +330,11 @@ export function useProject(initialSize = 16) {
   const reset = useCallback(() => {
     strokeRef.current = null;
     setState({
-      project: makeProject(project.size),
+      project: makeProject(project.width, project.height),
       history: [],
       future: [],
     });
-  }, [project.size]);
+  }, [project.width, project.height]);
 
   const setActiveFrame = useCallback(
     (i) => commit({ ...project, activeFrame: i, activeLayer: 0 }, { keepHistory: true }),
@@ -351,7 +378,8 @@ export function useProject(initialSize = 16) {
     removeFrame,
     moveFrame,
     // global
-    setSize,
+    setDimensions,
+    rotate,
     setPaletteColor,
     resetPalette,
     importGrid,

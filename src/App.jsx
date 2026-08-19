@@ -5,8 +5,6 @@ import { PX } from "./lib/palette.js";
 import {
   floodFillGrid,
   copyRegion,
-  rotateGridCW,
-  rotateGridCCW,
   flipGridH,
   flipGridV,
 } from "./lib/tools.js";
@@ -39,7 +37,8 @@ function loadSavedProject() {
 }
 
 export default function App() {
-  const p = useProject(loadSavedProject()?.size || 16);
+  const saved = loadSavedProject();
+  const p = useProject(saved?.width || 16, saved?.height || 16);
   const { project, activeFrame } = p;
 
   const [tool, setTool] = useState("pencil");
@@ -95,15 +94,15 @@ export default function App() {
 
   const handleFill = useCallback(
     (index) => {
-      p.applyGrid((g) => floodFillGrid(g, project.size, index, currentColor));
+      p.applyGrid((g) => floodFillGrid(g, project.width, project.height, index, currentColor));
       flash("Relleno aplicado.");
     },
-    [p, project.size, currentColor, flash]
+    [p, project.width, project.height, currentColor, flash]
   );
 
   const handlePick = useCallback(
     (index) => {
-      const { colors } = composeFrame(activeFrame, project.size);
+      const { colors } = composeFrame(activeFrame, project.width, project.height);
       const c = colors[index];
       if (!c || c[3] === 0) {
         flash("Píxel transparente — nada que tomar.");
@@ -126,12 +125,14 @@ export default function App() {
       setCurrentColor(best);
       flash(`Cuentagotas: ${best} (${project.palette[best]})`);
     },
-    [activeFrame, project.size, project.palette, flash]
+    [activeFrame, project.width, project.height, project.palette, flash]
   );
 
   const handleSelectionMove = useCallback(
     (region, target) => {
       if (!region || !target) return;
+      const w = project.width;
+      const h = project.height;
       p.applyGrid((g) => {
         let next = g.slice();
         // limpiar la zona original
@@ -139,8 +140,8 @@ export default function App() {
           for (let x = 0; x < region.w; x++) {
             const gx = region.x + x;
             const gy = region.y + y;
-            if (gx < 0 || gx >= project.size || gy < 0 || gy >= project.size) continue;
-            next[gy * project.size + gx] = ".";
+            if (gx < 0 || gx >= w || gy < 0 || gy >= h) continue;
+            next[gy * w + gx] = ".";
           }
         }
         // pegar en destino
@@ -148,9 +149,9 @@ export default function App() {
           for (let x = 0; x < region.w; x++) {
             const gx = target.x + x;
             const gy = target.y + y;
-            if (gx < 0 || gx >= project.size || gy < 0 || gy >= project.size) continue;
+            if (gx < 0 || gx >= w || gy < 0 || gy >= h) continue;
             const v = region.grid[y * region.w + x];
-            if (v && v !== ".") next[gy * project.size + gx] = v;
+            if (v && v !== ".") next[gy * w + gx] = v;
           }
         }
         return next;
@@ -158,7 +159,7 @@ export default function App() {
       setSelection({ x: target.x, y: target.y, w: region.w, h: region.h });
       flash("Selección movida.");
     },
-    [p, project.size, flash]
+    [p, project.width, project.height, flash]
   );
 
   // --- Portapapeles ---
@@ -167,30 +168,32 @@ export default function App() {
       flash("Primero seleccioná un área con la herramienta Selección.");
       return;
     }
-    const sub = copyRegion(activeLayerGrid, project.size, selection);
+    const sub = copyRegion(activeLayerGrid, project.width, project.height, selection);
     if (!sub) return;
     setClipboard({ ...sub, w: selection.w, h: selection.h });
     flash("Copiado al portapapeles (Ctrl+V para pegar).");
-  }, [selection, activeLayerGrid, project.size, flash]);
+  }, [selection, activeLayerGrid, project.width, project.height, flash]);
 
   const cutSelection = useCallback(() => {
     if (!selection) return;
     copySelection();
+    const w = project.width;
+    const h = project.height;
     p.applyGrid((g) => {
       const next = g.slice();
       for (let y = 0; y < selection.h; y++) {
         for (let x = 0; x < selection.w; x++) {
           const gx = selection.x + x;
           const gy = selection.y + y;
-          if (gx >= 0 && gx < project.size && gy >= 0 && gy < project.size) {
-            next[gy * project.size + gx] = ".";
+          if (gx >= 0 && gx < w && gy >= 0 && gy < h) {
+            next[gy * w + gx] = ".";
           }
         }
       }
       return next;
     });
     flash("Cortado.");
-  }, [selection, copySelection, p, project.size, flash]);
+  }, [selection, copySelection, p, project.width, project.height, flash]);
 
   const pasteSelection = useCallback(
     (offset = 8) => {
@@ -198,17 +201,19 @@ export default function App() {
         flash("Portapapeles vacío.");
         return;
       }
-      const x = selection ? selection.x + offset : Math.floor((project.size - clipboard.w) / 2);
-      const y = selection ? selection.y + offset : Math.floor((project.size - clipboard.h) / 2);
+      const w = project.width;
+      const h = project.height;
+      const x = selection ? selection.x + offset : Math.floor((w - clipboard.w) / 2);
+      const y = selection ? selection.y + offset : Math.floor((h - clipboard.h) / 2);
       p.applyGrid((g) => {
         let next = g.slice();
         for (let py = 0; py < clipboard.h; py++) {
           for (let px = 0; px < clipboard.w; px++) {
             const gx = x + px;
             const gy = y + py;
-            if (gx < 0 || gx >= project.size || gy < 0 || gy >= project.size) continue;
+            if (gx < 0 || gx >= w || gy < 0 || gy >= h) continue;
             const v = clipboard.grid[py * clipboard.w + px];
-            if (v && v !== ".") next[gy * project.size + gx] = v;
+            if (v && v !== ".") next[gy * w + gx] = v;
           }
         }
         return next;
@@ -216,26 +221,28 @@ export default function App() {
       setSelection({ x, y, w: clipboard.w, h: clipboard.h });
       flash("Pegado.");
     },
-    [clipboard, selection, project.size, p, flash]
+    [clipboard, selection, project.width, project.height, p, flash]
   );
 
   const deleteSelection = useCallback(() => {
     if (!selection) return;
+    const w = project.width;
+    const h = project.height;
     p.applyGrid((g) => {
       const next = g.slice();
       for (let y = 0; y < selection.h; y++) {
         for (let x = 0; x < selection.w; x++) {
           const gx = selection.x + x;
           const gy = selection.y + y;
-          if (gx >= 0 && gx < project.size && gy >= 0 && gy < project.size) {
-            next[gy * project.size + gx] = ".";
+          if (gx >= 0 && gx < w && gy >= 0 && gy < h) {
+            next[gy * w + gx] = ".";
           }
         }
       }
       return next;
     });
     flash("Selección borrada.");
-  }, [selection, p, project.size, flash]);
+  }, [selection, p, project.width, project.height, flash]);
 
   // --- Teclado ---
   useEffect(() => {
@@ -310,18 +317,19 @@ export default function App() {
     (text) => {
       try {
         const rows = parseSpriteText(text);
-        const grid = rowsToSpriteGrid(rows, project.size);
+        const grid = rowsToSpriteGrid(rows, project.width);
         p.importGrid(grid);
         flash("✓ Sprite importado en la capa activa.");
       } catch (e) {
         flash("✗ " + e.message);
       }
     },
-    [project.size, p, flash]
+    [project.width, p, flash]
   );
 
   // --- Importar imagen (PNG/JPG) a la capa activa ---
   // Recibe la imagen ya cargada (Image) y opcionalmente una región para recortar una figura.
+  // Si se importa una figura, ajusta el lienzo a su proporción (sin distorsión).
   const handleImportImage = useCallback(
     (img, exactColors, autoCrop = true, region = null) => {
       if (!img) {
@@ -329,14 +337,38 @@ export default function App() {
         return;
       }
       try {
-        const grid = imageToGrid(img, project.size, project.palette, exactColors, autoCrop, region);
-        p.importGrid(grid);
-        flash("✓ Imagen importada en la capa activa.");
-      } catch (e) {
-        flash("✗ " + e.message);
-      }
+        let w = project.width;
+        let h = project.height;
+        // ajustar el lienzo a la proporción de la figura importada
+        if (region) {
+          const ratio = region.w / region.h;
+          const dims = p.SIZES;
+          let bestW = 16;
+          let bestH = 16;
+          let bestDiff = Infinity;
+          for (const cw of dims) {
+            for (const ch of dims) {
+              const diff = Math.abs(cw / ch - ratio);
+              if (diff < bestDiff) {
+                bestDiff = diff;
+                bestW = cw;
+                bestH = ch;
+              }
+            }
+          }
+			w = bestW;
+				h = bestH;
+				p.setDimensions(w, h);
+				setSelection(null);
+			}
+			const grid = imageToGrid(img, w, h, project.palette, exactColors, autoCrop, region);
+			p.importGrid(grid);
+			flash("✓ Imagen importada en la capa activa.");
+		} catch (e) {
+			flash("✗ " + e.message);
+		}
     },
-    [project.size, project.palette, p, flash]
+    [project.width, project.height, project.palette, p, flash]
   );
 
   // --- Cargar JSON ---
@@ -354,18 +386,28 @@ export default function App() {
     [p, flash]
   );
 
-  const handleSizeChange = useCallback(
-    (size) => {
-      p.setSize(size);
+  const handleWidthChange = useCallback(
+    (w) => {
+      p.setDimensions(w, project.height);
       setSelection(null);
-      flash(`Tamaño: ${size}×${size}.`);
+      flash(`Lienzo: ${w}×${project.height}.`);
     },
-    [p, flash]
+    [p, project.height, flash]
+  );
+
+  const handleHeightChange = useCallback(
+    (h) => {
+      p.setDimensions(project.width, h);
+      setSelection(null);
+      flash(`Lienzo: ${project.width}×${h}.`);
+    },
+    [p, project.width, flash]
   );
 
   const handleRotate = useCallback(
     (dir) => {
-      p.transformLayer((g, size) => (dir === "cw" ? rotateGridCW(g, size) : rotateGridCCW(g, size)));
+      p.rotate(dir);
+      setSelection(null);
       flash(dir === "cw" ? "Rotado 90° →" : "Rotado 90° ←");
     },
     [p, flash]
@@ -373,7 +415,9 @@ export default function App() {
 
   const handleFlip = useCallback(
     (dir) => {
-      p.transformLayer((g, size) => (dir === "h" ? flipGridH(g, size) : flipGridV(g, size)));
+      p.transformLayer((g, w, h) =>
+        dir === "h" ? flipGridH(g, w, h) : flipGridV(g, w, h)
+      );
       flash(dir === "h" ? "Volteado horizontal" : "Volteado vertical");
     },
     [p, flash]
@@ -396,8 +440,10 @@ export default function App() {
           <Toolbar
             tool={tool}
             onToolChange={setTool}
-            size={project.size}
-            onSizeChange={handleSizeChange}
+            width={project.width}
+            height={project.height}
+            onWidthChange={handleWidthChange}
+            onHeightChange={handleHeightChange}
             sizes={p.SIZES}
             onRotateCW={() => handleRotate("cw")}
             onRotateCCW={() => handleRotate("ccw")}
@@ -418,7 +464,8 @@ export default function App() {
           />
 
           <PixelCanvas
-            size={project.size}
+            width={project.width}
+            height={project.height}
             frame={activeFrame}
             activeLayerGrid={activeLayerGrid}
             tool={tool}

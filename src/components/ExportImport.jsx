@@ -84,7 +84,8 @@ export default function ExportImport({
 
       <h3>Importar imagen (PNG / JPG)</h3>
       <p className="field-hint">
-        Detecta figuras separadas automáticamente. Elegí una figura o el conjunto completo.
+        Detecta figuras separadas automáticamente. Al elegir una figura, el lienzo se ajusta a su
+        proporción (sin distorsión). También podés importar el conjunto completo.
       </p>
       <label className="check-row">
         <input type="checkbox" checked={exactColors} onChange={(e) => setExactColors(e.target.checked)} />

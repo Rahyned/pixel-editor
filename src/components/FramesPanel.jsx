@@ -36,7 +36,7 @@ export default function FramesPanel({
             onClick={() => onSelect(i)}
             title={`Frame ${i + 1}`}
           >
-            <FrameThumb frame={frame} size={project.size} />
+            <FrameThumb frame={frame} width={project.width} height={project.height} />
             <span>{i + 1}</span>
           </div>
         ))}
@@ -67,23 +67,23 @@ export default function FramesPanel({
   );
 }
 
-function FrameThumb({ frame, size }) {
+function FrameThumb({ frame, width, height }) {
   const ref = useRef(null);
-  const s = 4;
+  const s = Math.min(4, Math.floor(48 / Math.max(width, height)));
   useEffect(() => {
     const cv = ref.current;
     if (!cv) return;
     const ctx = cv.getContext("2d");
     ctx.clearRect(0, 0, cv.width, cv.height);
-    const { colors } = composeFrame(frame, size);
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const c = colors[y * size + x];
+    const { colors } = composeFrame(frame, width, height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const c = colors[y * width + x];
         if (!c || c[3] === 0) continue;
         ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`;
         ctx.fillRect(x * s, y * s, s, s);
       }
     }
-  }, [frame, size]);
-  return <canvas ref={ref} className="frame-thumb" width={size * s} height={size * s} />;
+  }, [frame, width, height, s]);
+  return <canvas ref={ref} className="frame-thumb" width={width * s} height={height * s} />;
 }

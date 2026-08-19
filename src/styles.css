@@ -263,9 +263,13 @@ code {
   border-radius: 6px;
   background: repeating-conic-gradient(#262636 0% 25%, #1f1f2e 0% 50%) 0 0 / 20px 20px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   padding: 12px;
+}
+
+.canvas-wrap canvas {
+  margin: auto;
 }
 
 canvas#editor,

@@ -60,23 +60,24 @@ export function clonePalette(palette) {
 }
 
 // Convierte un array de filas de texto en una grilla de claves plana.
-export const rowsToGrid = (rows, size) => {
-  const grid = Array(size * size).fill(".");
+export const rowsToGrid = (rows, w) => {
+  const grid = Array(w * rows.length).fill(".");
   rows.forEach((row, y) => {
-    for (let x = 0; x < size && x < row.length; x++) {
-      grid[y * size + x] = row[x];
+    for (let x = 0; x < w && x < row.length; x++) {
+      grid[y * w + x] = row[x];
     }
   });
   return grid;
 };
 
 // Convierte una grilla plana en array de filas de texto.
-export const gridToRows = (grid, size) => {
+export const gridToRows = (grid, w) => {
+  const h = grid.length / w;
   const rows = [];
-  for (let y = 0; y < size; y++) {
+  for (let y = 0; y < h; y++) {
     let row = "";
-    for (let x = 0; x < size; x++) {
-      row += grid[y * size + x] || ".";
+    for (let x = 0; x < w; x++) {
+      row += grid[y * w + x] || ".";
     }
     rows.push(row);
   }

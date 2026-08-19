@@ -21,26 +21,29 @@ export function parseSpriteText(text) {
   return strings;
 }
 
-// Convierte filas de texto a grilla del tamaño dado (valida paleta).
-export function rowsToSpriteGrid(rows, size) {
+// Convierte filas de texto a grilla del ancho dado (valida paleta).
+export function rowsToSpriteGrid(rows, width) {
   const valid = new Set(Object.keys(PX));
   for (const row of rows) {
-    if (row.length !== size) {
-      throw new Error(`Cada fila debe tener ${size} chars (una fila tiene ${row.length}).`);
+    if (row.length !== width) {
+      throw new Error(`Cada fila debe tener ${width} chars (una fila tiene ${row.length}).`);
     }
     for (const ch of row) {
       if (!valid.has(ch)) throw new Error(`Carácter inválido: '${ch}'. ¿Es de la paleta?`);
     }
   }
-  return rowsToGrid(rows, size);
+  return rowsToGrid(rows, width);
 }
 
 // Carga un proyecto completo desde JSON. Devuelve objeto validado.
 export function parseProjectJson(text) {
   const data = JSON.parse(text);
   if (typeof data !== "object" || data === null) throw new Error("JSON inválido.");
-  const size = Number(data.size) || 16;
-  if (![8, 16, 24, 32, 48, 64].includes(size)) throw new Error(`Tamaño inválido: ${size}.`);
+  // compatibilidad: proyectos viejos guardaban solo "size" (cuadrado)
+  const width = Number(data.width) || Number(data.size) || 16;
+  const height = Number(data.height) || Number(data.size) || 16;
+  const maxDim = Math.max(width, height);
+  if (maxDim < 8 || maxDim > 512) throw new Error(`Tamaño inválido: ${width}x${height}.`);
   const palette = { ...clonePalette(PX) };
   if (data.palette && typeof data.palette === "object") {
     for (const k of Object.keys(data.palette)) {
@@ -54,11 +57,12 @@ export function parseProjectJson(text) {
       name: l.name || `Capa ${li + 1}`,
       visible: l.visible !== false,
       opacity: Number(l.opacity) || 1,
-      grid: sanitizeGrid(l.grid, size),
+      grid: sanitizeGrid(l.grid, width, height),
     })),
   }));
   return {
-    size,
+    width,
+    height,
     palette,
     activeFrame: Math.min(Number(data.activeFrame) || 0, clean.length - 1),
     activeLayer: 0,
@@ -66,17 +70,17 @@ export function parseProjectJson(text) {
   };
 }
 
-function sanitizeGrid(grid, size) {
-  const flat = Array(size * size).fill(".");
+function sanitizeGrid(grid, width, height) {
+  const flat = Array(width * height).fill(".");
   if (Array.isArray(grid)) {
     grid.forEach((row, y) => {
       if (Array.isArray(row)) {
         row.forEach((ch, x) => {
-          if (x < size && y < size && Object.keys(PX).includes(ch)) flat[y * size + x] = ch;
+          if (x < width && y < height && Object.keys(PX).includes(ch)) flat[y * width + x] = ch;
         });
       } else if (typeof row === "string") {
         [...row].forEach((ch, x) => {
-          if (x < size && y < size && Object.keys(PX).includes(ch)) flat[y * size + x] = ch;
+          if (x < width && y < height && Object.keys(PX).includes(ch)) flat[y * width + x] = ch;
         });
       }
     });
@@ -229,25 +233,25 @@ function drawScaledInto(ctx, srcCanvas, targetW, targetH) {
   drawRegionScaled(ctx, srcCanvas, box, targetW, targetH);
 }
 
-// Mapea una imagen a una grilla de claves de paleta de size×size.
+// Mapea una imagen a una grilla de claves de paleta de width×height.
 // - autoCrop: recorta bordes transparentes y ajusta
 // - region: si se pasa {x,y,w,h}, importa solo esa región (recorte de una figura)
-export function imageToGrid(img, size, palette, exactColors = false, autoCrop = true, region = null) {
+export function imageToGrid(img, width, height, palette, exactColors = false, autoCrop = true, region = null) {
   const src = loadImageToCanvas(img);
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (region) {
-    drawRegionScaled(ctx, src, region, size, size);
+    drawRegionScaled(ctx, src, region, width, height);
   } else if (autoCrop) {
-    drawScaledInto(ctx, src, size, size);
+    drawScaledInto(ctx, src, width, height);
   } else {
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(src, 0, 0, size, size);
+    ctx.drawImage(src, 0, 0, width, height);
   }
-  const data = ctx.getImageData(0, 0, size, size).data;
-  const grid = Array(size * size).fill(".");
+  const data = ctx.getImageData(0, 0, width, height).data;
+  const grid = Array(width * height).fill(".");
 
   // Para modo exacto: mapa de color exacto -> clave
   const exactMap = new Map();
@@ -255,7 +259,7 @@ export function imageToGrid(img, size, palette, exactColors = false, autoCrop = 
     exactMap.set(palette[k].toUpperCase(), k);
   }
 
-  for (let i = 0; i < size * size; i++) {
+  for (let i = 0; i < width * height; i++) {
     const r = data[i * 4];
     const g = data[i * 4 + 1];
     const b = data[i * 4 + 2];

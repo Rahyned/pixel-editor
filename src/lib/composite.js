@@ -35,25 +35,25 @@ function blend(src, dst) {
  *  - grid: clave del color más opaco que define el píxel (para P([...]))
  *  - colors: [r,g,b,a] compuesto, para export PNG/SVG con opacidad.
  */
-export function composeFrame(frame, size) {
-  const grid = Array(size * size).fill(".");
-  const colors = Array(size * size).fill(null);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+export function composeFrame(frame, width, height) {
+  const grid = Array(width * height).fill(".");
+  const colors = Array(width * height).fill(null);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
       let acc = [0, 0, 0, 0];
       let topKey = ".";
       // capas de abajo hacia arriba
       for (const layer of frame.layers) {
         if (!layer.visible || layer.opacity <= 0) continue;
-        const key = layer.grid[y * size + x];
+        const key = layer.grid[y * width + x];
         if (!key || key === ".") continue;
         const base = PX[key] || "#000000";
         acc = blend(hexToRgba(base, layer.opacity), acc);
         topKey = key;
       }
       if (acc[3] > 0) {
-        grid[y * size + x] = topKey;
-        colors[y * size + x] = acc;
+        grid[y * width + x] = topKey;
+        colors[y * width + x] = acc;
       }
     }
   }
@@ -61,7 +61,7 @@ export function composeFrame(frame, size) {
 }
 
 // Compone un solo píxel (para cuentagotas y preview).
-export function composePixel(frame, size, index) {
+export function composePixel(frame, width, index) {
   let acc = [0, 0, 0, 0];
   let topKey = ".";
   for (const layer of frame.layers) {

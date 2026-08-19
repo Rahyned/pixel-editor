@@ -7,12 +7,13 @@ export default function CodeOutput({ project, name, emoji }) {
 
   const code = useMemo(() => {
     const frame = project.frames[project.activeFrame];
-    const { grid } = composeFrame(frame, project.size);
-    const rows = gridToRows(grid, project.size);
+    const { width, height } = project;
+    const { grid } = composeFrame(frame, width, height);
+    const rows = gridToRows(grid, width);
     const safeName = (name || "MI_SPRITE").toUpperCase().replace(/[^A-Z0-9_]/g, "_");
     let out = "";
     if (emoji) out += `// ${emoji} `;
-    out += `// ${safeName} — sprite ${project.size}x${project.size} (frame ${project.activeFrame + 1}/${project.frames.length}).\n`;
+    out += `// ${safeName} — sprite ${width}x${height} (frame ${project.activeFrame + 1}/${project.frames.length}).\n`;
     out += `export const ${safeName} = P([\n`;
     out += rows.map((r) => `  "${r}"`).join(",\n");
     out += `\n]);\n`;

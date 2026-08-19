@@ -12,8 +12,10 @@ const TOOLS = [
 export default function Toolbar({
   tool,
   onToolChange,
-  size,
-  onSizeChange,
+  width,
+  height,
+  onWidthChange,
+  onHeightChange,
   sizes,
   onRotateCW,
   onRotateCCW,
@@ -46,11 +48,19 @@ export default function Toolbar({
         </div>
 
         <div className="tool-group size-group">
-          <label>Tamaño</label>
-          <select value={size} onChange={(e) => onSizeChange(Number(e.target.value))}>
+          <label>Ancho</label>
+          <select value={width} onChange={(e) => onWidthChange(Number(e.target.value))}>
             {sizes.map((s) => (
               <option key={s} value={s}>
-                {s}×{s}
+                {s}
+              </option>
+            ))}
+          </select>
+          <label>× Alto</label>
+          <select value={height} onChange={(e) => onHeightChange(Number(e.target.value))}>
+            {sizes.map((s) => (
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>

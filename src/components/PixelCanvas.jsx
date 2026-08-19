@@ -6,7 +6,8 @@ import { ellipseCells, lineCells, normalizeRect, rectCells } from "../lib/tools.
 const CELL = 16;
 
 export default function PixelCanvas({
-  size,
+  width,
+  height,
   frame,
   activeLayerGrid,
   tool,
@@ -40,17 +41,18 @@ export default function PixelCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const px = canvas.width / size;
+    const px = canvas.width / width;
+    const py = canvas.height / height;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // composición de capas visibles (respeta opacidad)
-    const { colors } = composeFrame(frame, size);
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const c = colors[y * size + x];
+    const { colors } = composeFrame(frame, width, height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const c = colors[y * width + x];
         if (!c || c[3] === 0) continue;
         ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`;
-        ctx.fillRect(x * px, y * px, px, px);
+        ctx.fillRect(x * px, y * py, px, py);
       }
     }
 
@@ -63,7 +65,7 @@ export default function PixelCanvas({
           const key = floatRegion.grid[y * floatRegion.w + x];
           if (!key || key === ".") continue;
           ctx.fillStyle = PX[key] || "#000";
-          ctx.fillRect((floatRegion.x + x) * px, (floatRegion.y + y) * px, px, px);
+          ctx.fillRect((floatRegion.x + x) * px, (floatRegion.y + y) * py, px, py);
         }
       }
       ctx.restore();
@@ -74,10 +76,10 @@ export default function PixelCanvas({
       const col = colorRef.current === "." ? "rgba(255,77,109,0.9)" : PX[colorRef.current] || "#000";
       ctx.globalAlpha = colorRef.current === "." ? 0.5 : 1;
       for (const idx of shapePreview) {
-        const x = idx % size;
-        const y = (idx - x) / size;
+        const x = idx % width;
+        const y = (idx - x) / width;
         ctx.fillStyle = col;
-        ctx.fillRect(x * px, y * px, px, px);
+        ctx.fillRect(x * px, y * py, px, py);
       }
       ctx.globalAlpha = 1;
     }
@@ -85,14 +87,16 @@ export default function PixelCanvas({
     // grilla fina
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 1;
-    for (let i = 0; i <= size; i++) {
+    for (let i = 0; i <= width; i++) {
       ctx.beginPath();
       ctx.moveTo(i * px, 0);
       ctx.lineTo(i * px, canvas.height);
       ctx.stroke();
+    }
+    for (let i = 0; i <= height; i++) {
       ctx.beginPath();
-      ctx.moveTo(0, i * px);
-      ctx.lineTo(canvas.width, i * px);
+      ctx.moveTo(0, i * py);
+      ctx.lineTo(canvas.width, i * py);
       ctx.stroke();
     }
 
@@ -102,13 +106,13 @@ export default function PixelCanvas({
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = Math.max(1, px * 0.2);
       ctx.setLineDash([px * 0.6, px * 0.4]);
-      ctx.strokeRect(sel.x * px, sel.y * px, sel.w * px, sel.h * px);
+      ctx.strokeRect(sel.x * px, sel.y * py, sel.w * px, sel.h * py);
       ctx.setLineDash([]);
       ctx.strokeStyle = "rgba(0,194,199,0.9)";
       ctx.lineWidth = Math.max(1, px * 0.1);
-      ctx.strokeRect(sel.x * px, sel.y * px, sel.w * px, sel.h * px);
+      ctx.strokeRect(sel.x * px, sel.y * py, sel.w * px, sel.h * py);
     }
-  }, [frame, size, shapePreview, floatRegion, dragRect, selection]);
+  }, [frame, width, height, shapePreview, floatRegion, dragRect, selection]);
 
   useEffect(() => {
     draw();
@@ -118,12 +122,12 @@ export default function PixelCanvas({
     (e) => {
       const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / (rect.width / size));
-      const y = Math.floor((e.clientY - rect.top) / (rect.height / size));
-      if (x < 0 || x >= size || y < 0 || y >= size) return null;
-      return { x, y, idx: y * size + x };
+      const x = Math.floor((e.clientX - rect.left) / (rect.width / width));
+      const y = Math.floor((e.clientY - rect.top) / (rect.height / height));
+      if (x < 0 || x >= width || y < 0 || y >= height) return null;
+      return { x, y, idx: y * width + x };
     },
-    [size]
+    [width, height]
   );
 
   const beginShapeDrag = useCallback(
@@ -141,14 +145,14 @@ export default function PixelCanvas({
       if (!d || d.mode !== "shape") return;
       const { x: ax, y: ay } = d.anchor;
       let cells = [];
-      if (tool === "line") cells = lineCells(ax, ay, cell.x, cell.y, size);
-      else if (tool === "rect") cells = rectCells(ax, ay, cell.x, cell.y, size, fillShapes);
-      else if (tool === "ellipse") cells = ellipseCells(ax, ay, cell.x, cell.y, size, fillShapes);
+      if (tool === "line") cells = lineCells(ax, ay, cell.x, cell.y, width, height);
+      else if (tool === "rect") cells = rectCells(ax, ay, cell.x, cell.y, width, height, fillShapes);
+      else if (tool === "ellipse") cells = ellipseCells(ax, ay, cell.x, cell.y, width, height, fillShapes);
       d.last = cell;
       shapeCellsRef.current = cells;
       setShapePreview(cells);
     },
-    [tool, size, fillShapes]
+    [tool, width, height, fillShapes]
   );
 
   const endShapeDrag = useCallback(() => {
@@ -197,7 +201,7 @@ export default function PixelCanvas({
       for (let gy = 0; gy < h; gy++) {
         let row = "";
         for (let gx = 0; gx < w; gx++) {
-          row += activeLayerGrid[(y + gy) * size + (x + gx)] || ".";
+          row += activeLayerGrid[(y + gy) * width + (x + gx)] || ".";
         }
         rows.push(row);
       }
@@ -210,7 +214,7 @@ export default function PixelCanvas({
       setFloatRegion({ ...selection, grid: dragRef.current.region.grid });
       onSelectionChange(null);
     },
-    [selection, activeLayerGrid, size, onSelectionChange]
+    [selection, activeLayerGrid, width, onSelectionChange]
   );
 
   const moveMoveSelect = useCallback(
@@ -321,13 +325,15 @@ export default function PixelCanvas({
 
   const fitZoom = useCallback(() => {
     const wrap = wrapRef.current;
-    const avail = Math.max(320, (wrap ? wrap.clientWidth : 720) - 16);
-    setZoom(Math.max(0.25, Math.min(8, avail / (size * CELL))));
-  }, [size, setZoom]);
+    const availW = Math.max(320, (wrap ? wrap.clientWidth : 720) - 16);
+    const availH = Math.max(320, (wrap ? wrap.clientHeight : 560) - 16);
+    const scale = Math.min(availW / (width * CELL), availH / (height * CELL));
+    setZoom(Math.max(0.25, Math.min(8, scale || 1)));
+  }, [width, height, setZoom]);
 
   useEffect(() => {
     fitZoom();
-  }, [size, fitZoom]);
+  }, [width, height, fitZoom]);
 
   const handleWheel = useCallback(
     (e) => {
@@ -354,9 +360,9 @@ export default function PixelCanvas({
       <div className="canvas-wrap" ref={wrapRef} onWheel={handleWheel}>
         <canvas
           ref={canvasRef}
-          width={size * CELL}
-          height={size * CELL}
-          style={{ width: size * CELL * zoom, height: size * CELL * zoom }}
+          width={width * CELL}
+          height={height * CELL}
+          style={{ width: width * CELL * zoom, height: height * CELL * zoom }}
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             handleDown(e);
