@@ -1,8 +1,8 @@
-# 🧷 Pixel Sprite Editor
+# Pixel Sprite Editor
 
 Editor de sprites pixel art en React + Vite. Pintá, animá, importá y exportá sprites para tus proyectos: PNG, sprite-sheet, SVG, JSON y código JS listo para pegar.
 
-## ✨ Funcionalidades
+## Funcionalidades
 
 ### Herramientas
 - **Pincel** (click = pintar) · **Borrador** (click derecho o Space) · **Relleno** (flood fill) · **Cuentagotas** · **Línea** · **Rectángulo** · **Elipse** (con toggle relleno/contorno) · **Selección** (mover, copiar/pegar/cortar)
@@ -32,7 +32,7 @@ Editor de sprites pixel art en React + Vite. Pintá, animá, importá y exportá
 - **Guardado automático** del borrador en LocalStorage
 - **Generador de código** `export const X = P([...])` (avisa si la paleta es custom)
 
-## 🎮 Atajos de teclado
+## Atajos de teclado
 
 | Atajo | Acción |
 |-------|--------|
@@ -51,20 +51,20 @@ npm install
 npm run dev      # http://localhost:5174
 ```
 
-## 🏗️ Build
+## Build
 
 ```bash
 npm run build    # genera dist/
 npm run preview  # previsualiza el build
 ```
 
-## 📦 Deploy
+## Deploy
 
 GitHub Actions (`/.github/workflows/deploy.yml`) publica `dist/` automáticamente en GitHub Pages al hacer push a `main`.
 
 URL: https://rahyned.github.io/pixel-editor/
 
-## 🎨 Paleta
+## Paleta
 
 Paleta por defecto (editable en el editor):
 
@@ -82,7 +82,7 @@ Paleta por defecto (editable en el editor):
 
 Además incluye escala de grises (`0`-`4`) y azules medios (`5`-`8`).
 
-## 📁 Estructura
+## Estructura
 
 ```
 src/
@@ -106,4 +106,4 @@ src/
     └── useProject.js     # estado + historial undo/redo
 ```
 
-© 2026 Lautaro | Diseño & código custom
+© 2026 Lautaro |
