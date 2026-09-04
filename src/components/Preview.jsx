@@ -5,14 +5,29 @@ export default function Preview({ project, scale }) {
   const largeRef = useRef(null);
   const [playFrame, setPlayFrame] = useState(project.activeFrame || 0);
 
-  // loop de animación (solo cuando playing y hay 2+ frames)
+  // loop de animación (solo cuando playing y hay 2+ frames).
+  // Cada frame respeta su duración individual en ms; si no tiene, usa 1000/fps.
   useEffect(() => {
     if (project.frames.length <= 1 || !project.playing) return;
-    const id = setInterval(() => {
-      setPlayFrame((p) => (p + 1) % project.frames.length);
-    }, 1000 / (project.playingFps || 6));
-    return () => clearInterval(id);
-  }, [project.frames.length, project.playing, project.playingFps]);
+    let cancelled = false;
+    let timer = null;
+    const defaultMs = Math.round(1000 / (project.playingFps || 6));
+    const step = () => {
+      if (cancelled) return;
+      setPlayFrame((prev) => {
+        const next = (prev + 1) % project.frames.length;
+        const f = project.frames[next];
+        const d = f?.duration ?? defaultMs;
+        timer = setTimeout(step, Math.max(1, d));
+        return next;
+      });
+    };
+    step();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [project.frames, project.playing, project.playingFps]);
 
   // frame manual cuando no se está reproduciendo
   useEffect(() => {

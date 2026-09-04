@@ -5,7 +5,7 @@ const TOOLS = [
   { id: "pipette", label: "Cuentagotas", icon: "💧", key: "I" },
   { id: "line", label: "Línea", icon: "╱", key: "L" },
   { id: "rect", label: "Rectángulo", icon: "▭", key: "R" },
-  { id: "ellipse", label: "Elipse", icon: "◯", key: "O" },
+  { id: "ellipse", label: "Elipse", icon: "◯", key: "" },
   { id: "select", label: "Selección", icon: "⌗", key: "S" },
 ];
 
@@ -29,6 +29,8 @@ export default function Toolbar({
   onReset,
   fillShapes,
   onFillShapesChange,
+  symmetry,
+  onSymmetryChange,
 }) {
   const sizeOptions = (current) => {
     const opts = sizes.includes(current) ? sizes : [...sizes, current].sort((a, b) => a - b);
@@ -43,7 +45,7 @@ export default function Toolbar({
               key={t.id}
               className={"btn tool" + (tool === t.id ? " active" : "")}
               onClick={() => onToolChange(t.id)}
-              title={`${t.label} (${t.key})`}
+              title={`${t.label}${t.key ? ` (${t.key})` : ""}`}
               aria-label={t.label}
               aria-pressed={tool === t.id}
             >
@@ -92,6 +94,16 @@ export default function Toolbar({
         </button>
         <button className="btn mini" onClick={onFlipV} title="Voltear vertical">
           ↕ voltear
+        </button>
+        <span className="sep" />
+        <button
+          className={"btn mini" + (symmetry ? " active" : "")}
+          onClick={onSymmetryChange}
+          title="Simetría vertical (M)"
+          aria-label="Alternar simetría vertical"
+          aria-pressed={symmetry}
+        >
+          🔄 Simetría
         </button>
         <span className="sep" />
         <button className="btn mini" onClick={onUndo} disabled={!canUndo} title="Deshacer (Ctrl+Z)">

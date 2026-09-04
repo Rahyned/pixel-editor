@@ -13,6 +13,7 @@ export default function ExportImport({
   project,
   name,
   scale,
+  fps,
   onScaleChange,
   onLoadJson,
   onImportSprite,
@@ -85,7 +86,7 @@ export default function ExportImport({
         >
           📐 {selection && selection.w > 0 ? "SVG selección" : "SVG"}
         </button>
-        <button className="btn ok" onClick={() => exportProjectJson(project, name)}>
+        <button className="btn ok" onClick={() => exportProjectJson(project, fps, name)}>
           💾 Guardar JSON
         </button>
       </div>

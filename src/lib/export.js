@@ -142,19 +142,21 @@ export function exportSvgSelection(project, name, selection) {
   download(new Blob([svg], { type: "image/svg+xml" }), `${safeName(name)}-sel-${w}x${h}.svg`);
 }
 
-// JSON de proyecto completo (frames + capas + paleta + tamaño).
-export function projectToJson(project) {
+// JSON de proyecto completo (fps + frames + capas + paleta + tamaño).
+// Cada frame exporta su duración en ms (null = sigue el fps global).
+export function projectToJson(project, fps) {
   const { width, height, palette, frames, activeFrame, activeLayer } = project;
+  const cleanFrames = frames.map((f) => ({ ...f, duration: f.duration ?? null }));
   return JSON.stringify(
-    { width, height, palette, activeFrame, activeLayer, frames },
+    { fps, width, height, palette, activeFrame, activeLayer, frames: cleanFrames },
     null,
     2
   );
 }
 
-export function exportProjectJson(project, name) {
+export function exportProjectJson(project, fps, name) {
   download(
-    new Blob([projectToJson(project)], { type: "application/json" }),
+    new Blob([projectToJson(project, fps)], { type: "application/json" }),
     `${safeName(name)}.pix.json`
   );
 }

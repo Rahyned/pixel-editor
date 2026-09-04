@@ -8,6 +8,8 @@ export default function PixelCanvas({
   width,
   height,
   frame,
+  frames,
+  activeFrameIndex,
   activeLayerGrid,
   tool,
   currentColor,
@@ -16,6 +18,8 @@ export default function PixelCanvas({
   setZoom,
   showGrid,
   onToggleGrid,
+  symmetry,
+  onion,
   selection,
   onSelectionChange,
   onSelectionMove,
@@ -52,6 +56,28 @@ export default function PixelCanvas({
     const py = canvas.height / height;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // onion skin: frames fantasma (prev/next) a baja opacidad, solo preview
+    if (onion.enabled && frames.length > 1) {
+      const ghostFrames = [];
+      if (onion.mode === "prev" || onion.mode === "both") ghostFrames.push(frames[activeFrameIndex - 1]);
+      if (onion.mode === "next" || onion.mode === "both") ghostFrames.push(frames[activeFrameIndex + 1]);
+      for (const gf of ghostFrames) {
+        if (!gf) continue;
+        const { colors } = composeFrame(gf, width, height, palette);
+        ctx.save();
+        ctx.globalAlpha = onion.opacity / 100;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const c = colors[y * width + x];
+            if (!c || c[3] === 0) continue;
+            ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`;
+            ctx.fillRect(x * px, y * py, px, py);
+          }
+        }
+        ctx.restore();
+      }
+    }
+
     // composición de capas visibles (respeta opacidad)
     const { colors } = composeFrame(frame, width, height, palette);
     for (let y = 0; y < height; y++) {
@@ -82,7 +108,15 @@ export default function PixelCanvas({
     if (shapePreview.length) {
       const col = colorRef.current === "." ? "rgba(255,77,109,0.9)" : palette[colorRef.current] || "#000";
       ctx.globalAlpha = colorRef.current === "." ? 0.5 : 1;
-      for (const idx of shapePreview) {
+      const cells = symmetry ? new Set(shapePreview) : shapePreview;
+      if (symmetry) {
+        for (const idx of shapePreview) {
+          const x = idx % width;
+          const y = (idx - x) / width;
+          cells.add(y * width + (width - 1 - x));
+        }
+      }
+      for (const idx of cells) {
         const x = idx % width;
         const y = (idx - x) / width;
         ctx.fillStyle = col;
@@ -109,7 +143,22 @@ export default function PixelCanvas({
       }
     }
 
-    // hover highlight (celda bajo el cursor)
+    // eje de simetría vertical (fino y punteado)
+    if (symmetry) {
+      const ax = (width / 2) * px;
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,102,102,0.45)";
+      ctx.lineWidth = Math.max(1, px * 0.08);
+      ctx.setLineDash([px * 0.35, px * 0.35]);
+      ctx.beginPath();
+      ctx.moveTo(ax, 0);
+      ctx.lineTo(ax, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // hover highlight (celda bajo el cursor, espejada si hay simetría)
     if (hoverCell) {
       ctx.save();
       if (colorRef.current === "." || !palette[colorRef.current]) {
@@ -123,6 +172,11 @@ export default function PixelCanvas({
       ctx.strokeStyle = "rgba(255,255,255,0.9)";
       ctx.lineWidth = Math.max(1, Math.min(px, py) * 0.08);
       ctx.strokeRect(hoverCell.x * px + 0.5, hoverCell.y * py + 0.5, px - 1, py - 1);
+      if (symmetry && (tool === "pencil" || tool === "eraser" || tool === "line" || tool === "rect" || tool === "ellipse")) {
+        const mx = width - 1 - hoverCell.x;
+        ctx.fillRect(mx * px, hoverCell.y * py, px, py);
+        ctx.strokeRect(mx * px + 0.5, hoverCell.y * py + 0.5, px - 1, py - 1);
+      }
       ctx.restore();
     }
 
@@ -138,7 +192,23 @@ export default function PixelCanvas({
       ctx.lineWidth = Math.max(1, px * 0.1);
       ctx.strokeRect(sel.x * px, sel.y * py, sel.w * px, sel.h * py);
     }
-  }, [frame, width, height, shapePreview, floatRegion, dragRect, selection, hoverCell, showGrid, palette]);
+  }, [
+    frame,
+    frames,
+    activeFrameIndex,
+    width,
+    height,
+    shapePreview,
+    floatRegion,
+    dragRect,
+    selection,
+    hoverCell,
+    showGrid,
+    symmetry,
+    onion,
+    palette,
+    tool,
+  ]);
 
   useEffect(() => {
     draw();
@@ -201,15 +271,31 @@ export default function PixelCanvas({
     [tool, width, height, fillShapes]
   );
 
+  // Expande un set de celdas con su espejo vertical (una sola operación
+  // de pintado / una sola entrada de undo).
+  const expandSymmetry = useCallback(
+    (cells) => {
+      if (!symmetry) return cells;
+      const out = new Set(cells);
+      for (const idx of cells) {
+        const x = idx % width;
+        const y = (idx - x) / width;
+        out.add(y * width + (width - 1 - x));
+      }
+      return [...out];
+    },
+    [symmetry, width]
+  );
+
   const endShapeDrag = useCallback(() => {
     const d = dragRef.current;
     if (d && d.mode === "shape") {
-      if (shapeCellsRef.current.length) onApplyCells(shapeCellsRef.current, colorRef.current);
+      if (shapeCellsRef.current.length) onApplyCells(expandSymmetry(shapeCellsRef.current), colorRef.current);
     }
     dragRef.current = null;
     shapeCellsRef.current = [];
     setShapePreview([]);
-  }, [onApplyCells]);
+  }, [onApplyCells, expandSymmetry]);
 
   const beginSelectDrag = useCallback(
     (cell) => {
@@ -286,9 +372,9 @@ export default function PixelCanvas({
   const paintAt = useCallback(
     (cell) => {
       const col = tool === "eraser" ? "." : colorRef.current;
-      paintCells([cell.idx], col);
+      paintCells(expandSymmetry([cell.idx]), col);
     },
-    [tool, paintCells]
+    [tool, paintCells, expandSymmetry]
   );
 
   const handleDown = useCallback(
@@ -299,7 +385,7 @@ export default function PixelCanvas({
       if (e.button === 2 && (tool === "pencil" || tool === "eraser")) {
         e.preventDefault();
         beginStroke();
-        paintCells([cell.idx], ".");
+        paintCells(expandSymmetry([cell.idx]), ".");
         dragRef.current = { mode: "paint" };
         return;
       }
@@ -332,6 +418,7 @@ export default function PixelCanvas({
       tool,
       beginStroke,
       paintCells,
+      expandSymmetry,
       paintAt,
       onFill,
       onPick,

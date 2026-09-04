@@ -14,7 +14,8 @@ function makeLayer(w, h, name) {
 }
 
 function makeFrame(w, h) {
-  return { layers: [makeLayer(w, h, "Capa 1")] };
+  // duration: null = seguir el fps global (1000/fps)
+  return { layers: [makeLayer(w, h, "Capa 1")], duration: null };
 }
 
 function makeProject(w, h) {
@@ -231,6 +232,17 @@ export function useProject(initialW = 16, initialH = 16) {
     [project, commit]
   );
 
+  // --- Duración individual por frame (ms). null = seguir fps global ---
+  const updateFrameDuration = useCallback(
+    (i, ms) => {
+      commit({
+        ...project,
+        frames: project.frames.map((f, fi) => (fi === i ? { ...f, duration: ms } : f)),
+      });
+    },
+    [project, commit]
+  );
+
   // --- Tamaño (conserva contenido recortando/padeando desde arriba-izquierda) ---
   const setDimensions = useCallback(
     (w, h) => {
@@ -391,6 +403,7 @@ export function useProject(initialW = 16, initialH = 16) {
     addFrame,
     removeFrame,
     moveFrame,
+    updateFrameDuration,
     // global
     setDimensions,
     rotate,

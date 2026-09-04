@@ -59,6 +59,7 @@ export function parseProjectJson(text) {
   const frames = Array.isArray(data.frames) && data.frames.length > 0 ? data.frames : null;
   if (!frames) throw new Error("El proyecto no tiene frames.");
   const clean = frames.map((f) => ({
+    duration: validDuration(f.duration),
     layers: (Array.isArray(f.layers) && f.layers.length > 0 ? f.layers : [{ grid: [] }]).map((l, li) => ({
       name: l.name || `Capa ${li + 1}`,
       visible: l.visible !== false,
@@ -70,10 +71,23 @@ export function parseProjectJson(text) {
     width,
     height,
     palette,
+    fps: validFps(data.fps),
     activeFrame: Math.min(Number(data.activeFrame) || 0, clean.length - 1),
     activeLayer: 0,
     frames: clean,
   };
+}
+
+// Duración de frame válida en ms (null = seguir fps global).
+function validDuration(d) {
+  const n = Number(d);
+  return Number.isFinite(n) && n > 0 && n <= 10000 ? Math.round(n) : null;
+}
+
+// Fps global válido (1-60), con fallback a 6.
+function validFps(f) {
+  const n = Number(f);
+  return Number.isFinite(n) && n >= 1 && n <= 60 ? Math.round(n) : 6;
 }
 
 function sanitizeGrid(grid, width, height) {

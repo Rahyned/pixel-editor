@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useProject } from "./state/useProject.js";
 import { composeFrame } from "./lib/composite.js";
 import { PX } from "./lib/palette.js";
@@ -26,6 +26,9 @@ import HelpModal from "./components/HelpModal.jsx";
 import "./styles.css";
 
 const STORAGE_KEY = "pixel-editor.v2.project";
+const SYMMETRY_KEY = "pixel-editor.v2.symmetry";
+const ONION_KEY = "pixel-editor.v2.onion";
+const THEME_KEY = "pixel-editor.v2.theme";
 
 function loadSavedProject() {
   try {
@@ -35,6 +38,16 @@ function loadSavedProject() {
     /* ignore */
   }
   return null;
+}
+
+function loadJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw != null) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return fallback;
 }
 
 export default function App() {
@@ -59,6 +72,24 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [sideTab, setSideTab] = useState("palette");
   const [hoverCell, setHoverCell] = useState(null);
+  const [symmetry, setSymmetry] = useState(() => loadJson(SYMMETRY_KEY, false));
+  const [onion, setOnion] = useState(() =>
+    loadJson(ONION_KEY, { enabled: false, mode: "prev", opacity: 30 })
+  );
+  const [theme, setTheme] = useState(() => loadJson(THEME_KEY, "light") || "light");
+
+  // aplica el tema antes del primer paint para evitar un flash del tema claro
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_KEY, JSON.stringify(theme));
+    } catch {
+      /* ignore */
+    }
+  }, [theme]);
 
   const activeLayerGrid = activeFrame.layers[project.activeLayer]?.grid || [];
   const isCustomPalette = !Object.keys(PX).every(
@@ -82,6 +113,22 @@ export default function App() {
       /* ignore */
     }
   }, [project]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SYMMETRY_KEY, JSON.stringify(symmetry));
+    } catch {
+      /* ignore */
+    }
+  }, [symmetry]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ONION_KEY, JSON.stringify(onion));
+    } catch {
+      /* ignore */
+    }
+  }, [onion]);
 
   // --- Acciones de edición ---
   const handleApplyCells = useCallback(
@@ -275,11 +322,23 @@ export default function App() {
         i: "pipette",
         l: "line",
         r: "rect",
-        o: "ellipse",
         s: "select",
       };
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        setOnion((v) => ({ ...v, mode: v.mode === "prev" ? "both" : "prev" }));
+        return;
+      }
       if (toolMap[e.key.toLowerCase()]) {
         setTool(toolMap[e.key.toLowerCase()]);
+        return;
+      }
+      if (e.key.toLowerCase() === "o") {
+        setOnion((v) => ({ ...v, enabled: !v.enabled }));
+        return;
+      }
+      if (e.key.toLowerCase() === "m") {
+        setSymmetry((v) => !v);
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -389,6 +448,7 @@ export default function App() {
       try {
         const parsed = parseProjectJson(text);
         p.loadProject(parsed);
+        setFps(parsed.fps || 6);
         setSelection(null);
         flash("✓ Proyecto cargado.");
       } catch (e) {
@@ -439,14 +499,24 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>🧷 Pixel Sprite Editor</h1>
-        <button
-          className="btn mini"
-          onClick={() => setShowHelp(true)}
-          title="Atajos y gestos (?)"
-          aria-label="Ver atajos de teclado"
-        >
-          ? Atajos
-        </button>
+        <div className="topbar-actions">
+          <button
+            className="btn mini"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            title={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+            aria-label={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+          >
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
+          <button
+            className="btn mini"
+            onClick={() => setShowHelp(true)}
+            title="Atajos y gestos (?)"
+            aria-label="Ver atajos de teclado"
+          >
+            ? Atajos
+          </button>
+        </div>
       </header>
 
       <div className="layout">
@@ -475,12 +545,16 @@ export default function App() {
             }}
             fillShapes={fillShapes}
             onFillShapesChange={setFillShapes}
+            symmetry={symmetry}
+            onSymmetryChange={() => setSymmetry((v) => !v)}
           />
 
           <PixelCanvas
             width={project.width}
             height={project.height}
             frame={activeFrame}
+            frames={project.frames}
+            activeFrameIndex={project.activeFrame}
             activeLayerGrid={activeLayerGrid}
             tool={tool}
             currentColor={currentColor}
@@ -489,6 +563,8 @@ export default function App() {
             setZoom={setZoom}
             showGrid={showGrid}
             onToggleGrid={() => setShowGrid((v) => !v)}
+            symmetry={symmetry}
+            onion={onion}
             selection={selection}
             onSelectionChange={setSelection}
             onSelectionMove={handleSelectionMove}
@@ -567,6 +643,9 @@ export default function App() {
               onTogglePlay={() => setPlaying((v) => !v)}
               fps={fps}
               onFpsChange={setFps}
+              onion={onion}
+              onOnionChange={setOnion}
+              onDurationChange={p.updateFrameDuration}
             />
           )}
 
@@ -585,6 +664,7 @@ export default function App() {
             project={project}
             name={name}
             scale={scale}
+            fps={fps}
             onScaleChange={setScale}
             onLoadJson={handleLoadJson}
             onImportSprite={handleImportSprite}
