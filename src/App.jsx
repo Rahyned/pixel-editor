@@ -22,6 +22,7 @@ import FramesPanel from "./components/FramesPanel.jsx";
 import Preview from "./components/Preview.jsx";
 import CodeOutput from "./components/CodeOutput.jsx";
 import ExportImport from "./components/ExportImport.jsx";
+import HelpModal from "./components/HelpModal.jsx";
 import "./styles.css";
 
 const STORAGE_KEY = "pixel-editor.v2.project";
@@ -37,7 +38,7 @@ function loadSavedProject() {
 }
 
 export default function App() {
-  const saved = loadSavedProject();
+  const [saved] = useState(loadSavedProject);
   const p = useProject(saved?.width || 16, saved?.height || 16);
   const { project, activeFrame } = p;
 
@@ -54,6 +55,10 @@ export default function App() {
   const [fillShapes, setFillShapes] = useState(false);
   const [status, setStatus] = useState("Listo. Elegí una herramienta y pintá.");
   const statusTimer = useRef(null);
+  const [showGrid, setShowGrid] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
+  const [sideTab, setSideTab] = useState("palette");
+  const [hoverCell, setHoverCell] = useState(null);
 
   const activeLayerGrid = activeFrame.layers[project.activeLayer]?.grid || [];
   const isCustomPalette = !Object.keys(PX).every(
@@ -102,7 +107,7 @@ export default function App() {
 
   const handlePick = useCallback(
     (index) => {
-      const { colors } = composeFrame(activeFrame, project.width, project.height);
+      const { colors } = composeFrame(activeFrame, project.width, project.height, project.palette);
       const c = colors[index];
       if (!c || c[3] === 0) {
         flash("Píxel transparente — nada que tomar.");
@@ -249,6 +254,10 @@ export default function App() {
     const onKey = (e) => {
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "?") {
+        setShowHelp((v) => !v);
+        return;
+      }
       const colorMap = { 1: "K", 2: "W", 3: "R", 4: "O", 5: "G", 6: "Y", 7: "N", 8: "L", 9: "B" };
       if (colorMap[e.key]) {
         setCurrentColor(colorMap[e.key]);
@@ -359,17 +368,17 @@ export default function App() {
               }
             }
           }
-			w = bestW;
-				h = bestH;
-				p.setDimensions(w, h);
-				setSelection(null);
-			}
-			const grid = imageToGrid(img, w, h, project.palette, exactColors, autoCrop, region);
-			p.importGrid(grid);
-			flash("✓ Imagen importada en la capa activa.");
-		} catch (e) {
-			flash("✗ " + e.message);
-		}
+          w = bestW;
+          h = bestH;
+          p.setDimensions(w, h);
+          setSelection(null);
+        }
+        const grid = imageToGrid(img, w, h, project.palette, exactColors, autoCrop, region);
+        p.importGrid(grid);
+        flash("✓ Imagen importada en la capa activa.");
+      } catch (e) {
+        flash("✗ " + e.message);
+      }
     },
     [project.width, project.height, project.palette, p, flash]
   );
@@ -430,12 +439,14 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>🧷 Pixel Sprite Editor</h1>
-        <p className="help">
-          Pintá sprites para tus proyectos. <b>Click</b> = pintar · <b>click derecho</b> = borrar ·
-          <b>arrastrar</b> = pintar seguido · <b>rueda</b> = zoom. Atajos: <code>1-9</code> color,{" "}
-          <code>B/E/G/I/L/R/O/S</code> herramientas, <code>Space</code> borrador,{" "}
-          <code>Ctrl+Z/Y</code> undo/redo, <code>Ctrl+C/X/V</code> y <code>Del</code> para selección.
-        </p>
+        <button
+          className="btn mini"
+          onClick={() => setShowHelp(true)}
+          title="Atajos y gestos (?)"
+          aria-label="Ver atajos de teclado"
+        >
+          ? Atajos
+        </button>
       </header>
 
       <div className="layout">
@@ -473,8 +484,11 @@ export default function App() {
             activeLayerGrid={activeLayerGrid}
             tool={tool}
             currentColor={currentColor}
+            palette={project.palette}
             zoom={zoom}
             setZoom={setZoom}
+            showGrid={showGrid}
+            onToggleGrid={() => setShowGrid((v) => !v)}
             selection={selection}
             onSelectionChange={setSelection}
             onSelectionMove={handleSelectionMove}
@@ -485,67 +499,87 @@ export default function App() {
             onPick={handlePick}
             onApplyCells={handleApplyCells}
             fillShapes={fillShapes}
+            onHoverChange={setHoverCell}
           />
-
-          <div className="config-row">
-            <div className="field">
-              <label>Nombre</label>
-              <input value={name} spellCheck={false} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Emoji</label>
-              <input value={emoji} maxLength={4} placeholder="⭐" style={{ maxWidth: 80 }} onChange={(e) => setEmoji(e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Escala preview</label>
-              <input
-                type="number"
-                value={scale}
-                min="1"
-                max="64"
-                style={{ maxWidth: 90 }}
-                onChange={(e) => setScale(Number(e.target.value) || 16)}
-              />
-            </div>
-          </div>
         </div>
 
         <aside className="side-col">
-          <Palette
-            palette={project.palette}
-            currentColor={currentColor}
-            onSelect={setCurrentColor}
-            onEdit={p.setPaletteColor}
-            onReset={p.resetPalette}
-            isCustom={isCustomPalette}
-          />
+          <div className="tabs" role="tablist" aria-label="Paneles de edición">
+            <button
+              role="tab"
+              className={"tab" + (sideTab === "palette" ? " active" : "")}
+              aria-selected={sideTab === "palette"}
+              onClick={() => setSideTab("palette")}
+            >
+              🎨 Paleta
+            </button>
+            <button
+              role="tab"
+              className={"tab" + (sideTab === "layers" ? " active" : "")}
+              aria-selected={sideTab === "layers"}
+              onClick={() => setSideTab("layers")}
+            >
+              🗂 Capas
+            </button>
+            <button
+              role="tab"
+              className={"tab" + (sideTab === "frames" ? " active" : "")}
+              aria-selected={sideTab === "frames"}
+              onClick={() => setSideTab("frames")}
+            >
+              🎞 Frames
+            </button>
+          </div>
 
-          <LayersPanel
-            frame={activeFrame}
-            activeLayer={project.activeLayer}
-            onSelect={p.setActiveLayer}
-            onAdd={p.addLayer}
-            onRemove={p.removeLayer}
-            onUpdate={(patch, i) => p.updateLayer(patch, i)}
-            onMove={(dir) => p.moveLayer(dir)}
-          />
+          {sideTab === "palette" && (
+            <Palette
+              palette={project.palette}
+              currentColor={currentColor}
+              onSelect={setCurrentColor}
+              onEdit={p.setPaletteColor}
+              onReset={p.resetPalette}
+              isCustom={isCustomPalette}
+            />
+          )}
 
-          <FramesPanel
-            project={project}
-            onSelect={p.setActiveFrame}
-            onAdd={p.addFrame}
-            onRemove={p.removeFrame}
-            onDuplicate={() => p.addFrame(true)}
-            onMove={p.moveFrame}
-            playing={playing}
-            onTogglePlay={() => setPlaying((v) => !v)}
-            fps={fps}
-            onFpsChange={setFps}
-          />
+          {sideTab === "layers" && (
+            <LayersPanel
+              frame={activeFrame}
+              activeLayer={project.activeLayer}
+              palette={project.palette}
+              onSelect={p.setActiveLayer}
+              onAdd={p.addLayer}
+              onRemove={p.removeLayer}
+              onUpdate={(patch, i) => p.updateLayer(patch, i)}
+              onMove={(dir) => p.moveLayer(dir)}
+            />
+          )}
+
+          {sideTab === "frames" && (
+            <FramesPanel
+              project={project}
+              onSelect={p.setActiveFrame}
+              onAdd={p.addFrame}
+              onRemove={p.removeFrame}
+              onDuplicate={() => p.addFrame(true)}
+              onMove={p.moveFrame}
+              playing={playing}
+              onTogglePlay={() => setPlaying((v) => !v)}
+              fps={fps}
+              onFpsChange={setFps}
+            />
+          )}
 
           <Preview project={{ ...project, playing, playingFps: fps }} scale={scale} />
 
-          <CodeOutput project={project} name={name} emoji={emoji} selection={selection} />
+          <CodeOutput
+            project={project}
+            name={name}
+            emoji={emoji}
+            onNameChange={setName}
+            onEmojiChange={setEmoji}
+            selection={selection}
+          />
 
           <ExportImport
             project={project}
@@ -560,7 +594,21 @@ export default function App() {
         </aside>
       </div>
 
-      <div className="status-bar">{status || "Listo."}</div>
+      <div className="status-bar">
+        <span className="status-msg">{status || "Listo."}</span>
+        <span className="status-spacer" />
+        <span className="status-seg">{hoverCell ? `${hoverCell.x}, ${hoverCell.y}` : "—"}</span>
+        <span className="status-seg">
+          {project.width}×{project.height}
+        </span>
+        <span className="status-seg">capa: {activeFrame.layers[project.activeLayer]?.name ?? "—"}</span>
+        <span className="status-seg">
+          frame {project.activeFrame + 1}/{project.frames.length}
+        </span>
+        <span className="status-seg">{Math.round(zoom * 100)}%</span>
+      </div>
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>
   );
 }

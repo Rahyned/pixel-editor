@@ -30,7 +30,7 @@ export default function Preview({ project, scale }) {
     cv.height = height * s;
     const ctx = cv.getContext("2d");
     ctx.clearRect(0, 0, cv.width, cv.height);
-    const { colors } = composeFrame(frame, width, height);
+    const { colors } = composeFrame(frame, width, height, project.palette);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const c = colors[y * width + x];

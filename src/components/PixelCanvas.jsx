@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { composeFrame } from "../lib/composite.js";
-import { PX } from "../lib/palette.js";
 import { ellipseCells, lineCells, normalizeRect, rectCells } from "../lib/tools.js";
 
 const CELL = 16;
@@ -12,8 +11,11 @@ export default function PixelCanvas({
   activeLayerGrid,
   tool,
   currentColor,
+  palette,
   zoom,
   setZoom,
+  showGrid,
+  onToggleGrid,
   selection,
   onSelectionChange,
   onSelectionMove,
@@ -24,14 +26,19 @@ export default function PixelCanvas({
   onPick,
   onApplyCells,
   fillShapes,
+  onHoverChange,
 }) {
   const canvasRef = useRef(null);
   const wrapRef = useRef(null);
   const dragRef = useRef(null);
   const shapeCellsRef = useRef([]);
+  const pointersRef = useRef(new Map());
+  const pinchRef = useRef(null);
   const [shapePreview, setShapePreview] = useState([]);
   const [dragRect, setDragRect] = useState(null);
   const [floatRegion, setFloatRegion] = useState(null);
+  const [hoverCell, setHoverCell] = useState(null);
+  const hoverRef = useRef(null);
   const colorRef = useRef(currentColor);
   useEffect(() => {
     colorRef.current = currentColor;
@@ -46,7 +53,7 @@ export default function PixelCanvas({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // composición de capas visibles (respeta opacidad)
-    const { colors } = composeFrame(frame, width, height);
+    const { colors } = composeFrame(frame, width, height, palette);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const c = colors[y * width + x];
@@ -64,7 +71,7 @@ export default function PixelCanvas({
         for (let x = 0; x < floatRegion.w; x++) {
           const key = floatRegion.grid[y * floatRegion.w + x];
           if (!key || key === ".") continue;
-          ctx.fillStyle = PX[key] || "#000";
+          ctx.fillStyle = palette[key] || "#000";
           ctx.fillRect((floatRegion.x + x) * px, (floatRegion.y + y) * py, px, py);
         }
       }
@@ -73,7 +80,7 @@ export default function PixelCanvas({
 
     // preview de forma (línea/rect/elipse)
     if (shapePreview.length) {
-      const col = colorRef.current === "." ? "rgba(255,77,109,0.9)" : PX[colorRef.current] || "#000";
+      const col = colorRef.current === "." ? "rgba(255,77,109,0.9)" : palette[colorRef.current] || "#000";
       ctx.globalAlpha = colorRef.current === "." ? 0.5 : 1;
       for (const idx of shapePreview) {
         const x = idx % width;
@@ -85,19 +92,38 @@ export default function PixelCanvas({
     }
 
     // grilla fina
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= width; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * px, 0);
-      ctx.lineTo(i * px, canvas.height);
-      ctx.stroke();
+    if (showGrid) {
+      ctx.strokeStyle = "rgba(0,0,0,0.35)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= width; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * px, 0);
+        ctx.lineTo(i * px, canvas.height);
+        ctx.stroke();
+      }
+      for (let i = 0; i <= height; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * py);
+        ctx.lineTo(canvas.width, i * py);
+        ctx.stroke();
+      }
     }
-    for (let i = 0; i <= height; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, i * py);
-      ctx.lineTo(canvas.width, i * py);
-      ctx.stroke();
+
+    // hover highlight (celda bajo el cursor)
+    if (hoverCell) {
+      ctx.save();
+      if (colorRef.current === "." || !palette[colorRef.current]) {
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+      } else {
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = palette[colorRef.current];
+      }
+      ctx.fillRect(hoverCell.x * px, hoverCell.y * py, px, py);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = Math.max(1, Math.min(px, py) * 0.08);
+      ctx.strokeRect(hoverCell.x * px + 0.5, hoverCell.y * py + 0.5, px - 1, py - 1);
+      ctx.restore();
     }
 
     // selección
@@ -112,7 +138,7 @@ export default function PixelCanvas({
       ctx.lineWidth = Math.max(1, px * 0.1);
       ctx.strokeRect(sel.x * px, sel.y * py, sel.w * px, sel.h * py);
     }
-  }, [frame, width, height, shapePreview, floatRegion, dragRect, selection]);
+  }, [frame, width, height, shapePreview, floatRegion, dragRect, selection, hoverCell, showGrid, palette]);
 
   useEffect(() => {
     draw();
@@ -128,6 +154,26 @@ export default function PixelCanvas({
       return { x, y, idx: y * width + x };
     },
     [width, height]
+  );
+
+  const clearHover = useCallback(() => {
+    if (!hoverRef.current) return;
+    hoverRef.current = null;
+    setHoverCell(null);
+    if (onHoverChange) onHoverChange(null);
+  }, [onHoverChange]);
+
+  const updateHover = useCallback(
+    (e) => {
+      if (dragRef.current) return;
+      const cell = cellFromEvent(e);
+      const prev = hoverRef.current;
+      if ((cell && prev && cell.x === prev.x && cell.y === prev.y) || (!cell && !prev)) return;
+      hoverRef.current = cell;
+      setHoverCell(cell);
+      if (onHoverChange) onHoverChange(cell ? { x: cell.x, y: cell.y } : null);
+    },
+    [cellFromEvent, onHoverChange]
   );
 
   const beginShapeDrag = useCallback(
@@ -249,6 +295,7 @@ export default function PixelCanvas({
     (e) => {
       const cell = cellFromEvent(e);
       if (!cell) return;
+      clearHover();
       if (e.button === 2 && (tool === "pencil" || tool === "eraser")) {
         e.preventDefault();
         beginStroke();
@@ -292,6 +339,7 @@ export default function PixelCanvas({
       beginSelectDrag,
       beginMoveSelect,
       selection,
+      clearHover,
     ]
   );
 
@@ -365,24 +413,74 @@ export default function PixelCanvas({
           style={{ width: width * CELL * zoom, height: height * CELL * zoom }}
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
+            pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointersRef.current.size >= 2) {
+              // segundo dedo: cancelar el gesto actual y pasar a pinch-zoom
+              handleUp();
+              dragRef.current = null;
+              shapeCellsRef.current = [];
+              setShapePreview([]);
+              setDragRect(null);
+              setFloatRegion(null);
+              const pts = [...pointersRef.current.values()];
+              pinchRef.current = {
+                dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+                zoom,
+              };
+              clearHover();
+              return;
+            }
             handleDown(e);
           }}
-          onPointerMove={handleMove}
-          onPointerUp={handleUp}
-          onPointerCancel={handleUp}
+          onPointerMove={(e) => {
+            if (pointersRef.current.has(e.pointerId)) {
+              pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            }
+            if (pinchRef.current && pointersRef.current.size >= 2) {
+              const pts = [...pointersRef.current.values()];
+              const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+              if (pinchRef.current.dist > 4) {
+                const next = Math.max(0.25, Math.min(8, (pinchRef.current.zoom * dist) / pinchRef.current.dist));
+                setZoom(next);
+              }
+              return;
+            }
+            updateHover(e);
+            handleMove(e);
+          }}
+          onPointerUp={(e) => {
+            pointersRef.current.delete(e.pointerId);
+            if (pointersRef.current.size < 2) pinchRef.current = null;
+            handleUp();
+          }}
+          onPointerCancel={(e) => {
+            pointersRef.current.delete(e.pointerId);
+            if (pointersRef.current.size < 2) pinchRef.current = null;
+            handleUp();
+          }}
+          onPointerLeave={clearHover}
           onContextMenu={(e) => e.preventDefault()}
         />
       </div>
       <div className="zoom-bar">
-        <button className="btn mini" onClick={() => setZoom(Math.max(0.25, zoom / 1.25))} title="Alejar">
+        <button className="btn mini" onClick={() => setZoom(Math.max(0.25, zoom / 1.25))} title="Alejar" aria-label="Alejar zoom">
           −
         </button>
         <span className="zoom-val">{Math.round(zoom * 100)}%</span>
-        <button className="btn mini" onClick={() => setZoom(Math.min(8, zoom * 1.25))} title="Acercar">
+        <button className="btn mini" onClick={() => setZoom(Math.min(8, zoom * 1.25))} title="Acercar" aria-label="Acercar zoom">
           +
         </button>
-        <button className="btn mini" onClick={fitZoom} title="Ajustar al panel">
+        <button className="btn mini" onClick={fitZoom} title="Ajustar al panel" aria-label="Ajustar lienzo al panel">
           ⤢
+        </button>
+        <button
+          className={"btn mini" + (showGrid ? "" : " muted")}
+          onClick={onToggleGrid}
+          title={showGrid ? "Ocultar grilla" : "Mostrar grilla"}
+          aria-label="Alternar grilla"
+          aria-pressed={showGrid}
+        >
+          #
         </button>
       </div>
     </div>

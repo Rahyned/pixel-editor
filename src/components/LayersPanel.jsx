@@ -1,16 +1,21 @@
 import { useEffect, useRef } from "react";
-import { PX } from "../lib/palette.js";
 
-export default function LayersPanel({ frame, activeLayer, onSelect, onAdd, onRemove, onUpdate, onMove }) {
+export default function LayersPanel({ frame, activeLayer, palette, onSelect, onAdd, onRemove, onUpdate, onMove }) {
   return (
     <div className="panel layers-panel">
       <div className="panel-head">
         <h2>Capas</h2>
         <div className="panel-actions">
-          <button className="btn mini" onClick={onAdd} title="Nueva capa">
+          <button className="btn mini" onClick={onAdd} title="Nueva capa" aria-label="Nueva capa">
             +
           </button>
-          <button className="btn mini danger" onClick={onRemove} disabled={frame.layers.length <= 1} title="Eliminar capa">
+          <button
+            className="btn mini danger"
+            onClick={onRemove}
+            disabled={frame.layers.length <= 1}
+            title="Eliminar capa"
+            aria-label="Eliminar capa"
+          >
             −
           </button>
         </div>
@@ -22,7 +27,7 @@ export default function LayersPanel({ frame, activeLayer, onSelect, onAdd, onRem
             className={"layer-row" + (i === activeLayer ? " active" : "")}
             onClick={() => onSelect(i)}
           >
-            <LayerThumb layer={layer} />
+            <LayerThumb layer={layer} palette={palette} />
             <div className="layer-info">
               <input
                 className="layer-name"
@@ -52,6 +57,8 @@ export default function LayersPanel({ frame, activeLayer, onSelect, onAdd, onRem
                   onUpdate({ visible: !layer.visible }, i);
                 }}
                 title={layer.visible ? "Ocultar" : "Mostrar"}
+                aria-label={(layer.visible ? "Ocultar" : "Mostrar") + " capa " + layer.name}
+                aria-pressed={!layer.visible}
               >
                 {layer.visible ? "👁" : "🚫"}
               </button>
@@ -63,6 +70,7 @@ export default function LayersPanel({ frame, activeLayer, onSelect, onAdd, onRem
                   onMove(-1, i);
                 }}
                 title="Subir"
+                aria-label={"Subir capa " + layer.name}
               >
                 ↑
               </button>
@@ -74,6 +82,7 @@ export default function LayersPanel({ frame, activeLayer, onSelect, onAdd, onRem
                   onMove(1, i);
                 }}
                 title="Bajar"
+                aria-label={"Bajar capa " + layer.name}
               >
                 ↓
               </button>
@@ -85,7 +94,7 @@ export default function LayersPanel({ frame, activeLayer, onSelect, onAdd, onRem
   );
 }
 
-function LayerThumb({ layer }) {
+function LayerThumb({ layer, palette }) {
   const ref = useRef(null);
   const gridSize = Math.round(Math.sqrt(layer.grid.length));
   const s = 6;
@@ -100,10 +109,10 @@ function LayerThumb({ layer }) {
       for (let x = 0; x < gridSize; x++) {
         const key = layer.grid[y * gridSize + x];
         if (!key || key === ".") continue;
-        ctx.fillStyle = PX[key] || "#000";
+        ctx.fillStyle = palette[key] || "#000";
         ctx.fillRect(x * s, y * s, s, s);
       }
     }
-  }, [layer, gridSize]);
+  }, [layer, gridSize, palette]);
   return <canvas ref={ref} className="layer-thumb" width={gridSize * s} height={gridSize * s} />;
 }

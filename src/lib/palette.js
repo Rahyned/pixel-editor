@@ -50,6 +50,12 @@ export const PX = {
   "6": "#3E5E8C", // azul medio
   "7": "#54769F", // azul medio claro
   "8": "#6B8CB5", // azul medio claro 2
+  // --- lavandas ---
+  "^": "#D2D2E6", // lavanda muy claro
+  "+": "#BBBAD6", // lavanda claro
+  "=": "#8282A8", // lavanda medio
+  // --- negros extra ---
+  "9": "#000101", // negro absoluto
 };
 
 // Orden de la paleta visual (excluye transparente)
@@ -57,6 +63,7 @@ export const PX_ORDER = [
   "K", "W", "R", "O", "G", "Y", "N", "L", "B", "C", "P", "V", "T", "H", "E", "F", "A",
   "D", "I", "J", "Q", "U", "M", "X", "Z", "S", "%", "!", "$", "&", "#", "@",
   "0", "1", "2", "3", "4", "5", "6", "7", "8",
+  "^", "+", "=", "9",
 ];
 
 export const DEFAULT_PALETTE = PX_ORDER.reduce((acc, k) => ((acc[k] = PX[k]), acc), {});

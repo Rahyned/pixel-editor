@@ -48,6 +48,7 @@ export function useProject(initialW = 16, initialH = 16) {
   }));
 
   const strokeRef = useRef(null);
+  const lastPaletteEditRef = useRef(null);
 
   const project = state.project;
   const activeFrame = project.frames[project.activeFrame];
@@ -267,14 +268,27 @@ export function useProject(initialW = 16, initialH = 16) {
   );
 
   // --- Paleta ---
-  const setPaletteColor = useCallback(
-    (key, hex) => {
-      commit({ ...project, palette: { ...project.palette, [key]: hex } });
-    },
-    [project, commit]
-  );
+  // Ediciones consecutivas de la misma clave (ej: arrastrar en el picker)
+  // se coalescen en una sola entrada de historial.
+  const setPaletteColor = useCallback((key, hex) => {
+    const now = Date.now();
+    const prev = lastPaletteEditRef.current;
+    const coalesce = prev !== null && prev.key === key && now - prev.time < 1000;
+    lastPaletteEditRef.current = { key, time: now };
+    setState((s) => {
+      const next = { ...s.project, palette: { ...s.project.palette, [key]: hex } };
+      return coalesce
+        ? { ...s, project: next, future: [] }
+        : {
+            project: next,
+            history: [...s.history.slice(-(MAX_HISTORY - 1)), s.project],
+            future: [],
+          };
+    });
+  }, []);
 
   const resetPalette = useCallback(() => {
+    lastPaletteEditRef.current = null;
     commit({ ...project, palette: clonePalette(DEFAULT_PALETTE) });
   }, [project, commit]);
 

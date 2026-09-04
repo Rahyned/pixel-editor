@@ -22,7 +22,7 @@ function cropGridToRows(grid, width, region) {
   return rows;
 }
 
-export default function CodeOutput({ project, name, emoji, selection }) {
+export default function CodeOutput({ project, name, emoji, onNameChange, onEmojiChange, selection }) {
   const [copied, setCopied] = useState(false);
 
   const code = useMemo(() => {
@@ -71,6 +71,28 @@ export default function CodeOutput({ project, name, emoji, selection }) {
         <button className="btn mini" onClick={copy}>
           {copied ? "✓ Copiado" : "Copiar"}
         </button>
+      </div>
+      <div className="code-fields">
+        <div className="field">
+          <label htmlFor="spriteName">Nombre</label>
+          <input
+            id="spriteName"
+            value={name}
+            spellCheck={false}
+            onChange={(e) => onNameChange(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="spriteEmoji">Emoji</label>
+          <input
+            id="spriteEmoji"
+            value={emoji}
+            maxLength={4}
+            placeholder="⭐"
+            style={{ maxWidth: 80 }}
+            onChange={(e) => onEmojiChange(e.target.value)}
+          />
+        </div>
       </div>
       <div className="code-block">
         <pre>{code}</pre>

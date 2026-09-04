@@ -27,7 +27,7 @@ export default function Toolbar({
   canUndo,
   canRedo,
   onReset,
-    fillShapes,
+  fillShapes,
   onFillShapesChange,
 }) {
   const sizeOptions = (current) => {
@@ -44,8 +44,8 @@ export default function Toolbar({
               className={"btn tool" + (tool === t.id ? " active" : "")}
               onClick={() => onToolChange(t.id)}
               title={`${t.label} (${t.key})`}
-
-
+              aria-label={t.label}
+              aria-pressed={tool === t.id}
             >
               <span className="tool-icon">{t.icon}</span>
               <span className="tool-label">{t.label}</span>

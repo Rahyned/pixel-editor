@@ -17,13 +17,19 @@ export default function FramesPanel({
       <div className="panel-head">
         <h2>Frames · Animación</h2>
         <div className="panel-actions">
-          <button className="btn mini" onClick={() => onAdd(false)} title="Nuevo frame">
+          <button className="btn mini" onClick={() => onAdd(false)} title="Nuevo frame" aria-label="Nuevo frame">
             +
           </button>
-          <button className="btn mini" onClick={() => onAdd(true)} title="Duplicar frame">
+          <button className="btn mini" onClick={() => onAdd(true)} title="Duplicar frame" aria-label="Duplicar frame">
             ⧉
           </button>
-          <button className="btn mini danger" onClick={onRemove} disabled={project.frames.length <= 1} title="Eliminar frame">
+          <button
+            className="btn mini danger"
+            onClick={onRemove}
+            disabled={project.frames.length <= 1}
+            title="Eliminar frame"
+            aria-label="Eliminar frame"
+          >
             −
           </button>
         </div>
@@ -36,14 +42,19 @@ export default function FramesPanel({
             onClick={() => onSelect(i)}
             title={`Frame ${i + 1}`}
           >
-            <FrameThumb frame={frame} width={project.width} height={project.height} />
+            <FrameThumb frame={frame} width={project.width} height={project.height} palette={project.palette} />
             <span>{i + 1}</span>
           </div>
         ))}
       </div>
       {project.frames.length > 1 && (
         <div className="anim-controls">
-          <button className="btn mini" onClick={onTogglePlay} title={playing ? "Pausar" : "Reproducir"}>
+          <button
+            className="btn mini"
+            onClick={onTogglePlay}
+            title={playing ? "Pausar" : "Reproducir"}
+            aria-label={playing ? "Pausar animación" : "Reproducir animación"}
+          >
             {playing ? "⏸" : "▶"}
           </button>
           <span className="fps-label">{fps} fps</span>
@@ -54,11 +65,24 @@ export default function FramesPanel({
             value={fps}
             onChange={(e) => onFpsChange(Number(e.target.value))}
             title="Velocidad"
+            aria-label="Velocidad de animación (fps)"
           />
-          <button className="btn mini" disabled={project.activeFrame === 0} onClick={() => onMove(-1)} title="Mover frame a la izquierda">
+          <button
+            className="btn mini"
+            disabled={project.activeFrame === 0}
+            onClick={() => onMove(-1)}
+            title="Mover frame a la izquierda"
+            aria-label="Mover frame a la izquierda"
+          >
             ◀
           </button>
-          <button className="btn mini" disabled={project.activeFrame === project.frames.length - 1} onClick={() => onMove(1)} title="Mover frame a la derecha">
+          <button
+            className="btn mini"
+            disabled={project.activeFrame === project.frames.length - 1}
+            onClick={() => onMove(1)}
+            title="Mover frame a la derecha"
+            aria-label="Mover frame a la derecha"
+          >
             ▶
           </button>
         </div>
@@ -67,7 +91,7 @@ export default function FramesPanel({
   );
 }
 
-function FrameThumb({ frame, width, height }) {
+function FrameThumb({ frame, width, height, palette }) {
   const ref = useRef(null);
   const s = Math.min(4, Math.floor(48 / Math.max(width, height)));
   useEffect(() => {
@@ -75,7 +99,7 @@ function FrameThumb({ frame, width, height }) {
     if (!cv) return;
     const ctx = cv.getContext("2d");
     ctx.clearRect(0, 0, cv.width, cv.height);
-    const { colors } = composeFrame(frame, width, height);
+    const { colors } = composeFrame(frame, width, height, palette);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const c = colors[y * width + x];
@@ -84,6 +108,6 @@ function FrameThumb({ frame, width, height }) {
         ctx.fillRect(x * s, y * s, s, s);
       }
     }
-  }, [frame, width, height, s]);
+  }, [frame, width, height, s, palette]);
   return <canvas ref={ref} className="frame-thumb" width={width * s} height={height * s} />;
 }

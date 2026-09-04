@@ -53,7 +53,7 @@ export function parseProjectJson(text) {
   const palette = { ...clonePalette(PX) };
   if (data.palette && typeof data.palette === "object") {
     for (const k of Object.keys(data.palette)) {
-      if (/^[A-Z]$/.test(k)) palette[k] = String(data.palette[k]);
+      if (k in PX) palette[k] = String(data.palette[k]);
     }
   }
   const frames = Array.isArray(data.frames) && data.frames.length > 0 ? data.frames : null;
