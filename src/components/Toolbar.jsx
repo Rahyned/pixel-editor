@@ -31,6 +31,8 @@ export default function Toolbar({
   onFillShapesChange,
   symmetry,
   onSymmetryChange,
+  snap,
+  onSnapChange,
 }) {
   const sizeOptions = (current) => {
     const opts = sizes.includes(current) ? sizes : [...sizes, current].sort((a, b) => a - b);
@@ -105,6 +107,27 @@ export default function Toolbar({
         >
           🔄 Simetría
         </button>
+        <div className="tool-group snap-group">
+          <button
+            className={"btn mini" + (snap.enabled ? " active" : "")}
+            onClick={() => onSnapChange({ ...snap, enabled: !snap.enabled })}
+            title="Snap a sub-grilla (Alt+S)"
+            aria-label="Alternar snap a grilla"
+            aria-pressed={snap.enabled}
+          >
+            ⌗ Snap
+          </button>
+          <select
+            value={snap.step}
+            onChange={(e) => onSnapChange({ ...snap, step: Number(e.target.value) })}
+            title="Paso del snap"
+            aria-label="Paso del snap a grilla"
+          >
+            <option value={2}>×2</option>
+            <option value={4}>×4</option>
+            <option value={8}>×8</option>
+          </select>
+        </div>
         <span className="sep" />
         <button className="btn mini" onClick={onUndo} disabled={!canUndo} title="Deshacer (Ctrl+Z)">
           ↩ Deshacer

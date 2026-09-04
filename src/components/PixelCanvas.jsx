@@ -22,6 +22,7 @@ export default function PixelCanvas({
   onToggleGrid,
   symmetry,
   onion,
+  snap,
   selection,
   onSelectionChange,
   onSelectionMove,
@@ -160,6 +161,27 @@ export default function PixelCanvas({
       ctx.restore();
     }
 
+    // guía de la sub-grilla cuando el snap está activo
+    if (snap.enabled) {
+      const step = snap.step;
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,102,102,0.28)";
+      ctx.lineWidth = Math.max(1, px * 0.05);
+      for (let gx = 0; gx <= width; gx += step) {
+        ctx.beginPath();
+        ctx.moveTo(gx * px, 0);
+        ctx.lineTo(gx * px, canvas.height);
+        ctx.stroke();
+      }
+      for (let gy = 0; gy <= height; gy += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy * py);
+        ctx.lineTo(canvas.width, gy * py);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // hover highlight (celda bajo el cursor, espejada si hay simetría)
     if (hoverCell) {
       ctx.save();
@@ -208,6 +230,7 @@ export default function PixelCanvas({
     showGrid,
     symmetry,
     onion,
+    snap,
     palette,
     tool,
   ]);
@@ -248,13 +271,27 @@ export default function PixelCanvas({
     [cellFromEvent, onHoverChange]
   );
 
+  // Snap a sub-grilla: redondea una coordenada al múltiplo más cercano del paso.
+  const snapCoord = useCallback(
+    (v, max) => {
+      if (!snap.enabled) return v;
+      return Math.max(0, Math.min(max, Math.round(v / snap.step) * snap.step));
+    },
+    [snap.enabled, snap.step]
+  );
+
   const beginShapeDrag = useCallback(
     (cell) => {
-      dragRef.current = { mode: "shape", anchor: cell, last: cell };
-      shapeCellsRef.current = [cell.idx];
-      setShapePreview([cell.idx]);
+      const anchor = {
+        x: snapCoord(cell.x, width - 1),
+        y: snapCoord(cell.y, height - 1),
+        idx: snapCoord(cell.y, height - 1) * width + snapCoord(cell.x, width - 1),
+      };
+      dragRef.current = { mode: "shape", anchor, last: anchor };
+      shapeCellsRef.current = [anchor.idx];
+      setShapePreview([anchor.idx]);
     },
-    []
+    [snapCoord, width, height]
   );
 
   const moveShapeDrag = useCallback(
@@ -262,15 +299,17 @@ export default function PixelCanvas({
       const d = dragRef.current;
       if (!d || d.mode !== "shape") return;
       const { x: ax, y: ay } = d.anchor;
+      const cx = snapCoord(cell.x, width - 1);
+      const cy = snapCoord(cell.y, height - 1);
       let cells = [];
-      if (tool === "line") cells = lineCells(ax, ay, cell.x, cell.y, width, height);
-      else if (tool === "rect") cells = rectCells(ax, ay, cell.x, cell.y, width, height, fillShapes);
-      else if (tool === "ellipse") cells = ellipseCells(ax, ay, cell.x, cell.y, width, height, fillShapes);
-      d.last = cell;
+      if (tool === "line") cells = lineCells(ax, ay, cx, cy, width, height);
+      else if (tool === "rect") cells = rectCells(ax, ay, cx, cy, width, height, fillShapes);
+      else if (tool === "ellipse") cells = ellipseCells(ax, ay, cx, cy, width, height, fillShapes);
+      d.last = { x: cx, y: cy };
       shapeCellsRef.current = cells;
       setShapePreview(cells);
     },
-    [tool, width, height, fillShapes]
+    [tool, width, height, fillShapes, snapCoord]
   );
 
   // Expande un set de celdas con su espejo vertical (una sola operación
@@ -300,8 +339,8 @@ export default function PixelCanvas({
   }, [onApplyCells, expandSymmetry]);
 
   const beginSelectDrag = useCallback(
-    (cell) => {
-      dragRef.current = { mode: "select", anchor: cell, last: cell };
+    (cell, extend) => {
+      dragRef.current = { mode: "select", anchor: cell, last: cell, extend: !!extend };
       setDragRect({ x: cell.x, y: cell.y, w: 1, h: 1 });
     },
     []
@@ -321,11 +360,20 @@ export default function PixelCanvas({
   const endSelectDrag = useCallback(() => {
     const d = dragRef.current;
     if (d && d.mode === "select" && dragRect) {
-      onSelectionChange(dragRect);
+      let rect = dragRect;
+      if (d.extend && selection) {
+        // unión: bounding box de la selección previa + la nueva
+        const x = Math.min(selection.x, dragRect.x);
+        const y = Math.min(selection.y, dragRect.y);
+        const x2 = Math.max(selection.x + selection.w, dragRect.x + dragRect.w);
+        const y2 = Math.max(selection.y + selection.h, dragRect.y + dragRect.h);
+        rect = { x, y, w: x2 - x, h: y2 - y };
+      }
+      onSelectionChange(rect);
     }
     dragRef.current = null;
     setDragRect(null);
-  }, [dragRect, onSelectionChange]);
+  }, [dragRect, onSelectionChange, selection]);
 
   const beginMoveSelect = useCallback(
     (cell) => {
@@ -411,7 +459,7 @@ export default function PixelCanvas({
         ) {
           beginMoveSelect(cell);
         } else {
-          beginSelectDrag(cell);
+          beginSelectDrag(cell, e.shiftKey);
         }
       }
     },

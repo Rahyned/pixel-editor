@@ -23,12 +23,18 @@ import Preview from "./components/Preview.jsx";
 import CodeOutput from "./components/CodeOutput.jsx";
 import ExportImport from "./components/ExportImport.jsx";
 import HelpModal from "./components/HelpModal.jsx";
+import GuideModal from "./components/GuideModal.jsx";
+import { presetToPalette } from "./lib/presets.js";
+import { BLEND_ORDER } from "./lib/composite.js";
+import { exportGif } from "./lib/gifExport.js";
+import { readShareParam } from "./lib/share.js";
 import "./styles.css";
 
 const STORAGE_KEY = "pixel-editor.v2.project";
 const SYMMETRY_KEY = "pixel-editor.v2.symmetry";
 const ONION_KEY = "pixel-editor.v2.onion";
 const THEME_KEY = "pixel-editor.v2.theme";
+const SNAP_KEY = "pixel-editor.v2.snap";
 
 function loadSavedProject() {
   try {
@@ -70,13 +76,24 @@ export default function App() {
   const statusTimer = useRef(null);
   const [showGrid, setShowGrid] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [sideTab, setSideTab] = useState("palette");
   const [hoverCell, setHoverCell] = useState(null);
   const [symmetry, setSymmetry] = useState(() => loadJson(SYMMETRY_KEY, false));
   const [onion, setOnion] = useState(() =>
     loadJson(ONION_KEY, { enabled: false, mode: "prev", opacity: 30 })
   );
-  const [theme, setTheme] = useState(() => loadJson(THEME_KEY, "light") || "light");
+  const [theme, setTheme] = useState(() => {
+    const saved = loadJson(THEME_KEY, null);
+    if (saved) return saved;
+    try {
+      return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
+  const [colorHistory, setColorHistory] = useState([]);
+  const [snap, setSnap] = useState(() => loadJson(SNAP_KEY, { enabled: false, step: 4 }));
 
   // aplica el tema antes del primer paint para evitar un flash del tema claro
   useLayoutEffect(() => {
@@ -105,6 +122,48 @@ export default function App() {
     []
   );
 
+  // elige color y lo registra en el historial (últimos 10)
+  const selectColor = useCallback((key) => {
+    setCurrentColor(key);
+    setColorHistory((prev) => {
+      const filtered = prev.filter((c) => c !== key);
+      return [key, ...filtered].slice(0, 10);
+    });
+  }, []);
+
+  const handleApplyPreset = useCallback(
+    (name) => {
+      const palette = presetToPalette(name);
+      if (!palette) return;
+      p.setPalette(palette);
+      flash(`Paleta ${name} cargada.`);
+    },
+    [p, flash]
+  );
+
+  const handleQuickGif = useCallback(async () => {
+    try {
+      const bytes = await exportGif(project, { speed: 1, fps });
+      const blob = new Blob([bytes], { type: "image/gif" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name || "sprite"}.gif`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      /* error silencioso */
+    }
+  }, [project, fps, name]);
+
+  const handleCycleBlend = useCallback(() => {
+    const current = activeFrame.layers[project.activeLayer]?.blendMode || "normal";
+    const idx = BLEND_ORDER.indexOf(current);
+    const next = BLEND_ORDER[(idx + 1) % BLEND_ORDER.length];
+    p.updateLayer({ blendMode: next });
+    flash(`Blend de capa: ${next}`);
+  }, [activeFrame, project.activeLayer, p, flash]);
+
   // Autoguardado
   useEffect(() => {
     try {
@@ -129,6 +188,33 @@ export default function App() {
       /* ignore */
     }
   }, [onion]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SNAP_KEY, JSON.stringify(snap));
+    } catch {
+      /* ignore */
+    }
+  }, [snap]);
+
+  // Cargar proyecto compartido desde ?project=... (una sola vez)
+  const loadedFromUrl = useRef(false);
+  useEffect(() => {
+    if (loadedFromUrl.current) return;
+    loadedFromUrl.current = true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const prm = params.get("project");
+      if (!prm) return;
+      const parsed = parseProjectJson(readShareParam(prm));
+      p.loadProject(parsed);
+      setFps(parsed.fps || 6);
+      setSelection(null);
+      flash("✓ Proyecto compartido cargado.");
+    } catch {
+      /* URL inválida: seguir con el proyecto local */
+    }
+  }, [p, flash]);
 
   // --- Acciones de edición ---
   const handleApplyCells = useCallback(
@@ -174,10 +260,10 @@ export default function App() {
           best = k;
         }
       }
-      setCurrentColor(best);
+      selectColor(best);
       flash(`Cuentagotas: ${best} (${project.palette[best]})`);
     },
-    [activeFrame, project.width, project.height, project.palette, flash]
+    [activeFrame, project.width, project.height, project.palette, selectColor, flash]
   );
 
   const handleSelectionMove = useCallback(
@@ -307,7 +393,47 @@ export default function App() {
       }
       const colorMap = { 1: "K", 2: "W", 3: "R", 4: "O", 5: "G", 6: "Y", 7: "N", 8: "L", 9: "B" };
       if (colorMap[e.key]) {
-        setCurrentColor(colorMap[e.key]);
+        selectColor(colorMap[e.key]);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setSideTab("palette");
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        setSelection({ x: 0, y: 0, w: project.width, h: project.height });
+        flash("Seleccionado todo.");
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        handleQuickGif();
+        return;
+      }
+      if (e.altKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setSnap((v) => ({ ...v, enabled: !v.enabled }));
+        return;
+      }
+      if (e.altKey && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        handleCycleBlend();
+        return;
+      }
+      if (e.key.toLowerCase() === "d") {
+        setTheme((t) => (t === "dark" ? "light" : "dark"));
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        p.setActiveFrame((project.activeFrame - 1 + project.frames.length) % project.frames.length);
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        p.setActiveFrame((project.activeFrame + 1) % project.frames.length);
         return;
       }
       if (e.key === " ") {
@@ -378,7 +504,21 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [p, copySelection, cutSelection, pasteSelection, deleteSelection]);
+  }, [
+    p,
+    selectColor,
+    copySelection,
+    cutSelection,
+    pasteSelection,
+    deleteSelection,
+    handleQuickGif,
+    handleCycleBlend,
+    project.width,
+    project.height,
+    project.activeFrame,
+    project.frames.length,
+    flash,
+  ]);
 
   // --- Import de sprite ---
   const handleImportSprite = useCallback(
@@ -510,6 +650,14 @@ export default function App() {
           </button>
           <button
             className="btn mini"
+            onClick={() => setShowGuide(true)}
+            title="Guía de uso paso a paso"
+            aria-label="Abrir guía de uso"
+          >
+            📖 Guía
+          </button>
+          <button
+            className="btn mini"
             onClick={() => setShowHelp(true)}
             title="Atajos y gestos (?)"
             aria-label="Ver atajos de teclado"
@@ -547,6 +695,8 @@ export default function App() {
             onFillShapesChange={setFillShapes}
             symmetry={symmetry}
             onSymmetryChange={() => setSymmetry((v) => !v)}
+            snap={snap}
+            onSnapChange={setSnap}
           />
 
           <PixelCanvas
@@ -565,6 +715,7 @@ export default function App() {
             onToggleGrid={() => setShowGrid((v) => !v)}
             symmetry={symmetry}
             onion={onion}
+            snap={snap}
             selection={selection}
             onSelectionChange={setSelection}
             onSelectionMove={handleSelectionMove}
@@ -619,10 +770,13 @@ export default function App() {
             <Palette
               palette={project.palette}
               currentColor={currentColor}
-              onSelect={setCurrentColor}
+              onSelect={selectColor}
               onEdit={p.setPaletteColor}
               onReset={p.resetPalette}
               isCustom={isCustomPalette}
+              onApplyPreset={handleApplyPreset}
+              history={colorHistory}
+              onHistorySelect={selectColor}
             />
           )}
 
@@ -634,7 +788,7 @@ export default function App() {
               onSelect={p.setActiveLayer}
               onAdd={p.addLayer}
               onRemove={p.removeLayer}
-              onUpdate={(patch, i) => p.updateLayer(patch, i)}
+              onUpdate={(patch, i) => p.updateLayerAt(patch, i)}
               onMove={(dir) => p.moveLayer(dir)}
             />
           )}
@@ -672,13 +826,16 @@ export default function App() {
           {project.width}×{project.height}
         </span>
         <span className="status-seg">capa: {activeFrame.layers[project.activeLayer]?.name ?? "—"}</span>
+        <span className="status-seg">capas: {activeFrame.layers.length}</span>
         <span className="status-seg">
           frame {project.activeFrame + 1}/{project.frames.length}
         </span>
+        <span className="status-seg">frames: {project.frames.length}</span>
         <span className="status-seg">{Math.round(zoom * 100)}%</span>
       </div>
 
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+      {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
     </div>
   );
 }

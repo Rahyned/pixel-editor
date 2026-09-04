@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { composeFrame } from "../lib/composite.js";
 
 export default function FramesPanel({
@@ -16,6 +16,19 @@ export default function FramesPanel({
   onDurationChange,
 }) {
   const defaultMs = Math.round(1000 / (fps || 6));
+  const stripRef = useRef(null);
+  const scrubbingRef = useRef(false);
+  const [scrubbing, setScrubbing] = useState(false);
+
+  const pickFrameAt = (e) => {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    if (el?.closest?.("input, select, textarea, button")) return;
+    const cell = el?.closest?.(".frame-cell");
+    if (cell && cell.dataset.index != null) {
+      onSelect(Number(cell.dataset.index));
+    }
+  };
+
   return (
     <div className="panel timeline-panel">
       <div className="timeline-row">
@@ -40,10 +53,35 @@ export default function FramesPanel({
           </div>
         </div>
 
-        <div className="frame-strip">
+        <div
+          className={"frame-strip" + (scrubbing ? " dragging" : "")}
+          ref={stripRef}
+          onPointerDown={(e) => {
+            scrubbingRef.current = true;
+            setScrubbing(true);
+            stripRef.current?.setPointerCapture?.(e.pointerId);
+            pickFrameAt(e);
+          }}
+          onPointerMove={(e) => {
+            if (scrubbingRef.current) pickFrameAt(e);
+          }}
+          onPointerUp={() => {
+            scrubbingRef.current = false;
+            setScrubbing(false);
+          }}
+          onPointerCancel={() => {
+            scrubbingRef.current = false;
+            setScrubbing(false);
+          }}
+          onPointerLeave={() => {
+            scrubbingRef.current = false;
+            setScrubbing(false);
+          }}
+        >
           {project.frames.map((frame, i) => (
             <div
               key={i}
+              data-index={i}
               className={"frame-cell" + (i === project.activeFrame ? " active" : "")}
               onClick={() => onSelect(i)}
               title={`Frame ${i + 1}`}

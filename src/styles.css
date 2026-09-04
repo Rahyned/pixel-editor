@@ -70,7 +70,7 @@
   --scroll-thumb: #3a3a42;
   --overlay: rgba(5, 5, 8, 0.6);
   --on-accent: #0d1f1f;
-  --on-danger: #141417;
+  --on-danger: #fff;
 }
 
 * {
@@ -1236,6 +1236,24 @@ canvas#editor,
   width: 1%;
 }
 
+.help-guide h3 {
+  font-size: 12px;
+  color: var(--primary);
+  margin: 12px 0 4px;
+  letter-spacing: 0.4px;
+}
+
+.help-guide h3:first-child {
+  margin-top: 0;
+}
+
+.help-guide p {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
 /* ============ Accesibilidad ============ */
 :focus-visible {
   outline: 2px solid var(--primary);
@@ -1263,9 +1281,149 @@ canvas#editor,
   background: var(--primary-soft);
 }
 
-/* ============ Selects: flecha custom (la nativa se ve rota en oscuro) ============ */
+/* ============ Presets de paleta ============ */
+.preset-row {
+  margin-bottom: 10px;
+}
+
+.preset-row select {
+  width: 100%;
+  background-color: var(--surface-2);
+  color: var(--text);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  box-shadow: var(--shadow-inset-sm);
+  outline: none;
+}
+
+/* ============ Historial de colores ============ */
+.color-history {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid var(--shadow-color);
+}
+
+.history-label {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.history-colors {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.history-color {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-flat);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #16202b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.08s;
+  padding: 0;
+}
+
+.history-color:hover {
+  transform: scale(1.12);
+}
+
+/* ============ Blend mode por capa ============ */
+.blend-row select {
+  width: 100%;
+  background-color: var(--surface);
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-family: inherit;
+  font-size: 10px;
+  box-shadow: var(--shadow-inset-sm);
+  outline: none;
+}
+
+/* ============ GIF export ============ */
+.gif-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gif-row .btn {
+  flex: 1;
+}
+
+.gif-speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.gif-speed span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.gif-speed select {
+  background-color: var(--surface-2);
+  color: var(--text);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  box-shadow: var(--shadow-inset-sm);
+  outline: none;
+}
+
+/* ============ Compartir proyecto ============ */
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.share-msg {
+  font-size: 11px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* ============ Timeline: scrubbing ============ */
+.frame-strip {
+  cursor: default;
+}
+
+.frame-strip.dragging {
+  cursor: grabbing;
+}
+
+/* ============ Selects: flecha custom (al final para no pisar las reglas base) ============ */
 .tool-group select,
-.sprite-picker select {
+.sprite-picker select,
+.preset-row select,
+.blend-row select,
+.snap-group select,
+.gif-speed select {
   -webkit-appearance: none;
   appearance: none;
   padding-right: 32px;
@@ -1275,6 +1433,10 @@ canvas#editor,
 }
 
 [data-theme="dark"] .tool-group select,
-[data-theme="dark"] .sprite-picker select {
+[data-theme="dark"] .sprite-picker select,
+[data-theme="dark"] .preset-row select,
+[data-theme="dark"] .blend-row select,
+[data-theme="dark"] .snap-group select,
+[data-theme="dark"] .gif-speed select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%239c9a92' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
 }

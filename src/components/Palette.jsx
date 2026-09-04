@@ -1,6 +1,17 @@
 import { PX_ORDER } from "../lib/palette.js";
+import { PRESETS } from "../lib/presets.js";
 
-export default function Palette({ palette, currentColor, onSelect, onEdit, onReset, isCustom }) {
+export default function Palette({
+  palette,
+  currentColor,
+  onSelect,
+  onEdit,
+  onReset,
+  isCustom,
+  onApplyPreset,
+  history,
+  onHistorySelect,
+}) {
   const hex = currentColor === "." ? null : palette[currentColor] || "#000000";
   const canEdit = currentColor !== ".";
   return (
@@ -12,6 +23,25 @@ export default function Palette({ palette, currentColor, onSelect, onEdit, onRes
             ↺
           </button>
         </div>
+      </div>
+      <div className="preset-row">
+        <select
+          value="custom"
+          onChange={(e) => {
+            if (e.target.value !== "custom") onApplyPreset(e.target.value);
+          }}
+          aria-label="Cargar paleta preset"
+          title="Paletas clásicas listas para usar"
+        >
+          <option value="custom">Custom Palette</option>
+          <optgroup label="Presets">
+            {Object.keys(PRESETS).map((k) => (
+              <option key={k} value={k}>
+                {k.toUpperCase()}
+              </option>
+            ))}
+          </optgroup>
+        </select>
       </div>
       <div className="current-chip" aria-live="polite">
         <span
@@ -67,6 +97,26 @@ export default function Palette({ palette, currentColor, onSelect, onEdit, onRes
           );
         })}
       </div>
+      {history.length > 0 && (
+        <div className="color-history">
+          <span className="history-label">Usados:</span>
+          <div className="history-colors">
+            {history.map((k) => (
+              <button
+                type="button"
+                key={k}
+                className="history-color"
+                style={{ background: palette[k] || "#000000" }}
+                onClick={() => onHistorySelect(k)}
+                title={`Usar ${k}`}
+                aria-label={`Usar color ${k}`}
+              >
+                <span>{k === "." ? "·" : k}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

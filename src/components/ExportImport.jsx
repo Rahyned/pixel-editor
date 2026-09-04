@@ -8,6 +8,8 @@ import {
   exportSvgSelection,
 } from "../lib/export.js";
 import { loadImageFromFile, detectSprites } from "../lib/import.js";
+import { exportGif } from "../lib/gifExport.js";
+import { buildShareParam } from "../lib/share.js";
 import Collapsible from "./Collapsible.jsx";
 
 export default function ExportImport({
@@ -29,6 +31,27 @@ export default function ExportImport({
   const [sprites, setSprites] = useState([]);
   const [selectedSprite, setSelectedSprite] = useState(-1);
   const [currentImage, setCurrentImage] = useState(null);
+  const [gifBusy, setGifBusy] = useState(false);
+  const [gifProgress, setGifProgress] = useState(0);
+  const [gifSpeed, setGifSpeed] = useState(1);
+  const [shareMsg, setShareMsg] = useState("");
+
+  const handleShare = async () => {
+    try {
+      const param = buildShareParam(project, fps);
+      const url = `${window.location.origin}${window.location.pathname}?project=${param}`;
+      const tooLong = url.length > 2048;
+      try {
+        await navigator.clipboard.writeText(url);
+        setShareMsg(tooLong ? "URL copiada (muy larga ⚠️)." : "URL copiada 🔗");
+      } catch {
+        setShareMsg(url);
+      }
+    } catch {
+      setShareMsg("No se pudo generar la URL.");
+    }
+    setTimeout(() => setShareMsg(""), 3500);
+  };
 
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
@@ -57,6 +80,30 @@ export default function ExportImport({
     const region = selectedSprite === -1 ? null : sprites[selectedSprite];
     onImportImage(currentImage, exactColors, autoCrop, region);
     setSprites([]);
+  };
+
+  const handleGif = async () => {
+    if (gifBusy) return;
+    setGifBusy(true);
+    setGifProgress(0);
+    try {
+      const bytes = await exportGif(project, {
+        speed: gifSpeed,
+        fps,
+        onProgress: (done, total) => setGifProgress(Math.round((done / total) * 100)),
+      });
+      const blob = new Blob([bytes], { type: "image/gif" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name || "sprite"}.gif`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      /* error silencioso */
+    } finally {
+      setGifBusy(false);
+    }
   };
 
   return (
@@ -88,6 +135,37 @@ export default function ExportImport({
         <button className="btn ok" onClick={() => exportProjectJson(project, fps, name)}>
           💾 Guardar JSON
         </button>
+      </div>
+
+      <div className="gif-row">
+        <button
+          className="btn ok"
+          onClick={handleGif}
+          disabled={gifBusy}
+          aria-label="Exportar GIF animado"
+          title="Exportar GIF animado (Ctrl+G)"
+        >
+          {gifBusy ? `⏳ ${gifProgress}%` : "📹 Export GIF"}
+        </button>
+        <label className="field gif-speed">
+          <span>Vel.</span>
+          <select value={gifSpeed} onChange={(e) => setGifSpeed(Number(e.target.value))} aria-label="Velocidad del GIF">
+            <option value={0.5}>0.5x</option>
+            <option value={1}>1x</option>
+            <option value={2}>2x</option>
+          </select>
+        </label>
+      </div>
+      <p className="field-hint">
+        Genera el GIF con todos los frames respetando su duración. Puede tardar unos segundos en
+        proyectos grandes.
+      </p>
+
+      <div className="share-row">
+        <button className="btn secondary" onClick={handleShare} aria-label="Copiar URL del proyecto">
+          🔗 Compartir proyecto
+        </button>
+        {shareMsg && <span className="share-msg" aria-live="polite">{shareMsg}</span>}
       </div>
 
       <div className="field">

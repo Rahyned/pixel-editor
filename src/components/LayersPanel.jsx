@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { BLEND_ORDER } from "../lib/composite.js";
 
 export default function LayersPanel({ frame, activeLayer, palette, onSelect, onAdd, onRemove, onUpdate, onMove }) {
   return (
@@ -47,6 +48,21 @@ export default function LayersPanel({ frame, activeLayer, palette, onSelect, onA
                   onChange={(e) => onUpdate({ opacity: Number(e.target.value) / 100 }, i)}
                   title="Opacidad"
                 />
+              </div>
+              <div className="blend-row">
+                <select
+                  value={layer.blendMode || "normal"}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => onUpdate({ blendMode: e.target.value }, i)}
+                  title="Modo de mezcla"
+                  aria-label={`Modo de mezcla de ${layer.name}`}
+                >
+                  {BLEND_ORDER.map((m) => (
+                    <option key={m} value={m}>
+                      {m.charAt(0).toUpperCase() + m.slice(1)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="layer-tools">

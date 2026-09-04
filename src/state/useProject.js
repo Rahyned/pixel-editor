@@ -10,7 +10,7 @@ function emptyGrid(w, h) {
 }
 
 function makeLayer(w, h, name) {
-  return { name, visible: true, opacity: 1, grid: emptyGrid(w, h) };
+  return { name, visible: true, opacity: 1, blendMode: "normal", grid: emptyGrid(w, h) };
 }
 
 function makeFrame(w, h) {
@@ -180,6 +180,21 @@ export function useProject(initialW = 16, initialH = 16) {
     [project, commit]
   );
 
+  // Actualiza una capa específica del frame activo (no solo la activa).
+  const updateLayerAt = useCallback(
+    (patch, i) => {
+      commit({
+        ...project,
+        frames: project.frames.map((f, fi) =>
+          fi === project.activeFrame
+            ? { ...f, layers: f.layers.map((l, li) => (li === i ? { ...l, ...patch } : l)) }
+            : f
+        ),
+      });
+    },
+    [project, commit]
+  );
+
   const moveLayer = useCallback(
     (dir) => {
       const li = project.activeLayer;
@@ -304,6 +319,15 @@ export function useProject(initialW = 16, initialH = 16) {
     commit({ ...project, palette: clonePalette(DEFAULT_PALETTE) });
   }, [project, commit]);
 
+  // Reemplaza la paleta completa (ej: presets) en una sola entrada de histórico.
+  const setPalette = useCallback(
+    (palette) => {
+      lastPaletteEditRef.current = null;
+      commit({ ...project, palette: { ...palette } });
+    },
+    [project, commit]
+  );
+
   // --- Importar grilla completa al frame/capa activos ---
   const importGrid = useCallback(
     (grid) => {
@@ -398,6 +422,7 @@ export function useProject(initialW = 16, initialH = 16) {
     addLayer,
     removeLayer,
     updateLayer,
+    updateLayerAt,
     moveLayer,
     // frames
     addFrame,
@@ -409,6 +434,7 @@ export function useProject(initialW = 16, initialH = 16) {
     rotate,
     setPaletteColor,
     resetPalette,
+    setPalette,
     importGrid,
     loadProject,
     undo,
