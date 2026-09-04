@@ -8,6 +8,7 @@ import {
   exportSvgSelection,
 } from "../lib/export.js";
 import { loadImageFromFile, detectSprites } from "../lib/import.js";
+import Collapsible from "./Collapsible.jsx";
 
 export default function ExportImport({
   project,
@@ -59,9 +60,7 @@ export default function ExportImport({
   };
 
   return (
-    <div className="panel export-panel">
-      <h2>Exportar / Importar</h2>
-
+    <Collapsible title="Exportar / Importar">
       <div className="export-buttons">
         <button
           className="btn ok"
@@ -177,6 +176,6 @@ export default function ExportImport({
           ⬆ Cargar en capa activa
         </button>
       </div>
-    </div>
+    </Collapsible>
   );
 }

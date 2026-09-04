@@ -577,6 +577,22 @@ export default function App() {
             fillShapes={fillShapes}
             onHoverChange={setHoverCell}
           />
+
+          <FramesPanel
+            project={project}
+            onSelect={p.setActiveFrame}
+            onAdd={p.addFrame}
+            onRemove={p.removeFrame}
+            onDuplicate={() => p.addFrame(true)}
+            onMove={p.moveFrame}
+            playing={playing}
+            onTogglePlay={() => setPlaying((v) => !v)}
+            fps={fps}
+            onFpsChange={setFps}
+            onion={onion}
+            onOnionChange={setOnion}
+            onDurationChange={p.updateFrameDuration}
+          />
         </div>
 
         <aside className="side-col">
@@ -596,14 +612,6 @@ export default function App() {
               onClick={() => setSideTab("layers")}
             >
               🗂 Capas
-            </button>
-            <button
-              role="tab"
-              className={"tab" + (sideTab === "frames" ? " active" : "")}
-              aria-selected={sideTab === "frames"}
-              onClick={() => setSideTab("frames")}
-            >
-              🎞 Frames
             </button>
           </div>
 
@@ -628,24 +636,6 @@ export default function App() {
               onRemove={p.removeLayer}
               onUpdate={(patch, i) => p.updateLayer(patch, i)}
               onMove={(dir) => p.moveLayer(dir)}
-            />
-          )}
-
-          {sideTab === "frames" && (
-            <FramesPanel
-              project={project}
-              onSelect={p.setActiveFrame}
-              onAdd={p.addFrame}
-              onRemove={p.removeFrame}
-              onDuplicate={() => p.addFrame(true)}
-              onMove={p.moveFrame}
-              playing={playing}
-              onTogglePlay={() => setPlaying((v) => !v)}
-              fps={fps}
-              onFpsChange={setFps}
-              onion={onion}
-              onOnionChange={setOnion}
-              onDurationChange={p.updateFrameDuration}
             />
           )}
 

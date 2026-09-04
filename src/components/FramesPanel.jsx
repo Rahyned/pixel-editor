@@ -17,95 +17,99 @@ export default function FramesPanel({
 }) {
   const defaultMs = Math.round(1000 / (fps || 6));
   return (
-    <div className="panel frames-panel">
-      <div className="panel-head">
-        <h2>Frames · Animación</h2>
-        <div className="panel-actions">
-          <button className="btn mini" onClick={() => onAdd(false)} title="Nuevo frame" aria-label="Nuevo frame">
-            +
-          </button>
-          <button className="btn mini" onClick={() => onAdd(true)} title="Duplicar frame" aria-label="Duplicar frame">
-            ⧉
-          </button>
-          <button
-            className="btn mini danger"
-            onClick={onRemove}
-            disabled={project.frames.length <= 1}
-            title="Eliminar frame"
-            aria-label="Eliminar frame"
-          >
-            −
-          </button>
-        </div>
-      </div>
-      <div className="frame-strip">
-        {project.frames.map((frame, i) => (
-          <div
-            key={i}
-            className={"frame-cell" + (i === project.activeFrame ? " active" : "")}
-            onClick={() => onSelect(i)}
-            title={`Frame ${i + 1}`}
-          >
-            <FrameThumb frame={frame} width={project.width} height={project.height} palette={project.palette} />
-            <span>{i + 1}</span>
-            <label className="frame-duration" title="Duración del frame en ms">
-              <input
-                type="number"
-                min="1"
-                max="10000"
-                step="10"
-                value={frame.duration ?? defaultMs}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) =>
-                  onDurationChange(i, Math.max(1, Math.round(Number(e.target.value) || defaultMs)))
-                }
-                aria-label={`Duración del frame ${i + 1} en milisegundos`}
-              />
-              ms
-            </label>
+    <div className="panel timeline-panel">
+      <div className="timeline-row">
+        <div className="timeline-head">
+          <h2>Frames</h2>
+          <div className="panel-actions">
+            <button className="btn mini" onClick={() => onAdd(false)} title="Nuevo frame" aria-label="Nuevo frame">
+              +
+            </button>
+            <button className="btn mini" onClick={() => onAdd(true)} title="Duplicar frame" aria-label="Duplicar frame">
+              ⧉
+            </button>
+            <button
+              className="btn mini danger"
+              onClick={onRemove}
+              disabled={project.frames.length <= 1}
+              title="Eliminar frame"
+              aria-label="Eliminar frame"
+            >
+              −
+            </button>
           </div>
-        ))}
-      </div>
-      {project.frames.length > 1 && (
-        <div className="anim-controls">
-          <button
-            className="btn mini"
-            onClick={onTogglePlay}
-            title={playing ? "Pausar" : "Reproducir"}
-            aria-label={playing ? "Pausar animación" : "Reproducir animación"}
-          >
-            {playing ? "⏸" : "▶"}
-          </button>
-          <span className="fps-label">{fps} fps</span>
-          <input
-            type="range"
-            min="1"
-            max="24"
-            value={fps}
-            onChange={(e) => onFpsChange(Number(e.target.value))}
-            title="Velocidad global por defecto"
-            aria-label="Velocidad global de animación (fps)"
-          />
-          <button
-            className="btn mini"
-            disabled={project.activeFrame === 0}
-            onClick={() => onMove(-1)}
-            title="Mover frame a la izquierda"
-            aria-label="Mover frame a la izquierda"
-          >
-            ◀
-          </button>
-          <button
-            className="btn mini"
-            disabled={project.activeFrame === project.frames.length - 1}
-            onClick={() => onMove(1)}
-            title="Mover frame a la derecha"
-            aria-label="Mover frame a la derecha"
-          >
-            ▶
-          </button>
         </div>
-      )}
+
+        <div className="frame-strip">
+          {project.frames.map((frame, i) => (
+            <div
+              key={i}
+              className={"frame-cell" + (i === project.activeFrame ? " active" : "")}
+              onClick={() => onSelect(i)}
+              title={`Frame ${i + 1}`}
+            >
+              <FrameThumb frame={frame} width={project.width} height={project.height} palette={project.palette} />
+              <span>{i + 1}</span>
+              <label className="frame-duration" title="Duración del frame en ms">
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  step="10"
+                  value={frame.duration ?? defaultMs}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    onDurationChange(i, Math.max(1, Math.round(Number(e.target.value) || defaultMs)))
+                  }
+                  aria-label={`Duración del frame ${i + 1} en milisegundos`}
+                />
+                ms
+              </label>
+            </div>
+          ))}
+        </div>
+
+        {project.frames.length > 1 && (
+          <div className="anim-controls">
+            <button
+              className="btn mini"
+              onClick={onTogglePlay}
+              title={playing ? "Pausar" : "Reproducir"}
+              aria-label={playing ? "Pausar animación" : "Reproducir animación"}
+            >
+              {playing ? "⏸" : "▶"}
+            </button>
+            <span className="fps-label">{fps} fps</span>
+            <input
+              type="range"
+              min="1"
+              max="24"
+              value={fps}
+              onChange={(e) => onFpsChange(Number(e.target.value))}
+              title="Velocidad global por defecto"
+              aria-label="Velocidad global de animación (fps)"
+            />
+            <button
+              className="btn mini"
+              disabled={project.activeFrame === 0}
+              onClick={() => onMove(-1)}
+              title="Mover frame a la izquierda"
+              aria-label="Mover frame a la izquierda"
+            >
+              ◀
+            </button>
+            <button
+              className="btn mini"
+              disabled={project.activeFrame === project.frames.length - 1}
+              onClick={() => onMove(1)}
+              title="Mover frame a la derecha"
+              aria-label="Mover frame a la derecha"
+            >
+              ▶
+            </button>
+          </div>
+        )}
+      </div>
 
       {project.frames.length > 1 && (
         <div className="onion-box">

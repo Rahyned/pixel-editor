@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { composeFrame } from "../lib/composite.js";
+import Collapsible from "./Collapsible.jsx";
 
 export default function Preview({ project, scale }) {
   const largeRef = useRef(null);
   const [playFrame, setPlayFrame] = useState(project.activeFrame || 0);
+
+  const isMulti = project.frames.length > 1;
 
   // loop de animación (solo cuando playing y hay 2+ frames).
   // Cada frame respeta su duración individual en ms; si no tiene, usa 1000/fps.
@@ -56,17 +59,16 @@ export default function Preview({ project, scale }) {
     }
   }, [project, playFrame, scale]);
 
-  const isMulti = project.frames.length > 1;
-
   return (
-    <div className="panel preview-panel">
-      <h2>Vista previa {isMulti ? `· frame ${playFrame + 1}/${project.frames.length}` : ""}</h2>
+    <Collapsible
+      title={isMulti ? `Vista previa · frame ${playFrame + 1}/${project.frames.length}` : "Vista previa"}
+    >
       <div className="preview-wrap">
         <figure className="preview-item">
           <canvas ref={largeRef} />
           <figcaption>{isMulti ? "animación" : "sprite"} · {scale}px/px</figcaption>
         </figure>
       </div>
-    </div>
+    </Collapsible>
   );
 }

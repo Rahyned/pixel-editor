@@ -5,7 +5,7 @@
    ============================================================ */
 
 :root {
-  --bg: #e7e1d5;
+  --bg: #ddd9d2;
   --surface: #f1ece1;
   --surface-2: #e5decf;
   --text: #2a2f33;
@@ -15,7 +15,7 @@
   --success: #00a63d;
   --warning: #fe9900;
   --danger: #ff2157;
-  --shadow-color: #c8bfae;
+  --shadow-color: #c6bda9;
   --highlight: #fbf7ee;
   --radius: 16px;
   --radius-sm: 11px;
@@ -25,18 +25,23 @@
   --shadow-inset: inset 3px 3px 8px var(--shadow-color), inset -3px -3px 8px var(--highlight);
   --shadow-inset-sm: inset 2px 2px 5px var(--shadow-color), inset -2px -2px 5px var(--highlight);
   --shadow-flat: 2px 2px 6px var(--shadow-color), -2px -2px 6px var(--highlight);
-  --checker: #f6f1e6;
-  --checker-dark: #dcd4c2;
+  --checker: #f4eee1;
+  --checker-dark: #d9d1bf;
+  --dot: rgba(101, 90, 72, 0.4);
+  --glow: rgba(0, 102, 102, 0.2);
+  --canvas-border: #b9ae96;
+  --canvas-shadow: 0 6px 22px rgba(90, 78, 60, 0.25);
   --trans-checker-a: #d6cfbf;
   --trans-checker-b: #c6bda9;
   --scroll-thumb: #d6cfbf;
   --overlay: rgba(30, 41, 56, 0.42);
   --on-accent: #fff;
+  --on-danger: #1d1f24;
 }
 
 /* ============ Tema oscuro ============ */
 [data-theme="dark"] {
-  --bg: #232327;
+  --bg: #1d1d21;
   --surface: #2b2b31;
   --surface-2: #1f1f24;
   --text: #e9e7e2;
@@ -46,7 +51,7 @@
   --success: #2fd86a;
   --warning: #ffb24d;
   --danger: #ff5c7c;
-  --shadow-color: #16161b;
+  --shadow-color: #141417;
   --highlight: #3a3a42;
   --shadow-raised: 7px 7px 16px var(--shadow-color), -7px -7px 16px var(--highlight);
   --shadow-raised-sm: 4px 4px 10px var(--shadow-color), -4px -4px 10px var(--highlight);
@@ -55,12 +60,17 @@
   --shadow-inset-sm: inset 2px 2px 5px var(--shadow-color), inset -2px -2px 5px var(--highlight);
   --shadow-flat: 2px 2px 6px var(--shadow-color), -2px -2px 6px var(--highlight);
   --checker: #34343b;
-  --checker-dark: #27272d;
+  --checker-dark: #26262c;
+  --dot: rgba(255, 255, 255, 0.1);
+  --glow: rgba(43, 184, 184, 0.16);
+  --canvas-border: #37373f;
+  --canvas-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
   --trans-checker-a: #46464f;
   --trans-checker-b: #38383f;
   --scroll-thumb: #3a3a42;
   --overlay: rgba(5, 5, 8, 0.6);
   --on-accent: #0d1f1f;
+  --on-danger: #141417;
 }
 
 * {
@@ -78,6 +88,9 @@ body {
 body {
   font-family: "Space Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
   font-size: 14px;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--dot) 2px, transparent 2px);
+  background-size: 26px 26px;
 }
 
 .app {
@@ -86,8 +99,8 @@ body {
   height: 100vh;
   max-width: 1600px;
   margin: 0 auto;
-  padding: 16px;
-  gap: 14px;
+  padding: 12px;
+  gap: 12px;
 }
 
 /* ============ Topbar ============ */
@@ -129,6 +142,7 @@ code {
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-rows: minmax(0, 1fr);
   gap: 16px;
   flex: 1;
   min-height: 0;
@@ -137,7 +151,7 @@ code {
 .main-col {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
   min-height: 0;
 }
@@ -148,6 +162,13 @@ code {
   gap: 14px;
   overflow-y: auto;
   padding-right: 2px;
+  min-height: 0;
+}
+
+/* Los paneles de la columna lateral mantienen su alto natural:
+   al abrir un colapsable empujan hacia abajo y el contenedor scrollea */
+.side-col > * {
+  flex-shrink: 0;
 }
 
 @media (max-width: 1100px) {
@@ -247,7 +268,7 @@ code {
 
 .btn.danger {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 
 .btn.active {
@@ -535,7 +556,7 @@ input[type="range"]::-moz-range-thumb {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .canvas-wrap {
@@ -543,8 +564,10 @@ input[type="range"]::-moz-range-thumb {
   min-height: 0;
   overflow: auto;
   border-radius: var(--radius);
-  background: repeating-conic-gradient(var(--checker) 0% 25%, var(--checker-dark) 0% 50%) 0 0 / 22px 22px;
-  box-shadow: var(--shadow-inset);
+  background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 70%),
+    repeating-conic-gradient(var(--checker) 0% 25%, var(--checker-dark) 0% 50%) 0 0 / 22px 22px;
+  box-shadow: var(--shadow-inset), var(--canvas-shadow);
+  border: 2px solid var(--canvas-border);
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
@@ -737,12 +760,39 @@ canvas#editor,
   gap: 4px;
 }
 
-/* ============ Frames ============ */
+/* ============ Frames (timeline horizontal) ============ */
+.timeline-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.timeline-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.timeline-head h2 {
+  font-size: 12px;
+}
+
 .frame-strip {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding: 2px;
+  flex: 1;
+  min-width: 200px;
 }
 
 .frame-cell {
@@ -803,7 +853,7 @@ canvas#editor,
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
+  flex-shrink: 0;
 }
 
 .fps-label {
@@ -818,20 +868,19 @@ canvas#editor,
 
 /* ============ Onion skin ============ */
 .onion-box {
-  margin-top: 10px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   box-shadow: var(--shadow-inset-sm);
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 .onion-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
 
@@ -839,6 +888,7 @@ canvas#editor,
   font-size: 12px;
   font-weight: 700;
   color: var(--primary);
+  white-space: nowrap;
 }
 
 .onion-mode {
@@ -850,6 +900,9 @@ canvas#editor,
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
 }
 
 .onion-opacity input[type="range"] {
@@ -948,6 +1001,62 @@ canvas#editor,
   padding: 3px 9px;
   font-size: 11px;
   white-space: nowrap;
+}
+
+/* ============ Panel colapsable ============ */
+.collapsible {
+  padding: 0;
+  overflow: hidden;
+}
+
+.collapse-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.collapse-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.collapse-toggle .chevron {
+  color: var(--muted);
+  font-size: 11px;
+  width: 12px;
+}
+
+.collapse-toggle .collapse-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.collapse-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.collapse-body {
+  padding: 0 14px 14px;
+  overflow-y: auto;
+  max-height: 60vh;
 }
 
 /* ============ Tabs de la columna lateral ============ */

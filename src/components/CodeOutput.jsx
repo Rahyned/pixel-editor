@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { composeFrame } from "../lib/composite.js";
 import { gridToRows, isDefaultPalette } from "../lib/palette.js";
+import Collapsible from "./Collapsible.jsx";
 
 // Recorta una región de la grilla compuesta y devuelve el array de filas.
 function cropGridToRows(grid, width, region) {
@@ -65,13 +66,15 @@ export default function CodeOutput({ project, name, emoji, onNameChange, onEmoji
   };
 
   return (
-    <div className="panel code-panel">
-      <div className="panel-head">
-        <h2>Código JS {selection ? <span className="custom-badge">selección</span> : ""}</h2>
+    <Collapsible
+      title="Código JS"
+      badge={selection ? "selección" : undefined}
+      actions={
         <button className="btn mini" onClick={copy}>
           {copied ? "✓ Copiado" : "Copiar"}
         </button>
-      </div>
+      }
+    >
       <div className="code-fields">
         <div className="field">
           <label htmlFor="spriteName">Nombre</label>
@@ -97,6 +100,6 @@ export default function CodeOutput({ project, name, emoji, onNameChange, onEmoji
       <div className="code-block">
         <pre>{code}</pre>
       </div>
-    </div>
+    </Collapsible>
   );
 }

@@ -3,6 +3,8 @@ import { composeFrame } from "../lib/composite.js";
 import { ellipseCells, lineCells, normalizeRect, rectCells } from "../lib/tools.js";
 
 const CELL = 16;
+const MIN_ZOOM = 0.0625;
+const MAX_ZOOM = 8;
 
 export default function PixelCanvas({
   width,
@@ -463,7 +465,7 @@ export default function PixelCanvas({
     const availW = Math.max(320, (wrap ? wrap.clientWidth : 720) - 16);
     const availH = Math.max(320, (wrap ? wrap.clientHeight : 560) - 16);
     const scale = Math.min(availW / (width * CELL), availH / (height * CELL));
-    setZoom(Math.max(0.25, Math.min(8, scale || 1)));
+    setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale || 1)));
   }, [width, height, setZoom]);
 
   useEffect(() => {
@@ -476,7 +478,7 @@ export default function PixelCanvas({
       const wrap = wrapRef.current;
       const rect = wrap.getBoundingClientRect();
       const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-      const next = Math.max(0.25, Math.min(8, zoom * factor));
+      const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * factor));
       setZoom(next);
       const relX = e.clientX - rect.left;
       const relY = e.clientY - rect.top;
@@ -527,7 +529,7 @@ export default function PixelCanvas({
               const pts = [...pointersRef.current.values()];
               const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
               if (pinchRef.current.dist > 4) {
-                const next = Math.max(0.25, Math.min(8, (pinchRef.current.zoom * dist) / pinchRef.current.dist));
+                const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (pinchRef.current.zoom * dist) / pinchRef.current.dist));
                 setZoom(next);
               }
               return;
@@ -550,11 +552,11 @@ export default function PixelCanvas({
         />
       </div>
       <div className="zoom-bar">
-        <button className="btn mini" onClick={() => setZoom(Math.max(0.25, zoom / 1.25))} title="Alejar" aria-label="Alejar zoom">
+        <button className="btn mini" onClick={() => setZoom(Math.max(MIN_ZOOM, zoom / 1.25))} title="Alejar" aria-label="Alejar zoom">
           −
         </button>
         <span className="zoom-val">{Math.round(zoom * 100)}%</span>
-        <button className="btn mini" onClick={() => setZoom(Math.min(8, zoom * 1.25))} title="Acercar" aria-label="Acercar zoom">
+        <button className="btn mini" onClick={() => setZoom(Math.min(MAX_ZOOM, zoom * 1.25))} title="Acercar" aria-label="Acercar zoom">
           +
         </button>
         <button className="btn mini" onClick={fitZoom} title="Ajustar al panel" aria-label="Ajustar lienzo al panel">
