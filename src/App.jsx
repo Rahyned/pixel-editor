@@ -498,7 +498,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>🧷 Pixel Sprite Editor</h1>
+        <h1>Pixel Sprite Editor</h1>
         <div className="topbar-actions">
           <button
             className="btn mini"
@@ -603,7 +603,7 @@ export default function App() {
               aria-selected={sideTab === "palette"}
               onClick={() => setSideTab("palette")}
             >
-              🎨 Paleta
+              Paleta
             </button>
             <button
               role="tab"
@@ -611,7 +611,7 @@ export default function App() {
               aria-selected={sideTab === "layers"}
               onClick={() => setSideTab("layers")}
             >
-              🗂 Capas
+              Capas
             </button>
           </div>
 
