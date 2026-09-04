@@ -44,66 +44,7 @@ Editor de sprites pixel art en React + Vite. Pintá, animá, importá y exportá
 | `Del` | Borrar selección |
 | `Esc` | Cancelar selección |
 
-## 🚀 Ejecutar
 
-```bash
-npm install
-npm run dev      # http://localhost:5174
-```
-
-## Build
-
-```bash
-npm run build    # genera dist/
-npm run preview  # previsualiza el build
-```
-
-## Deploy
-
-GitHub Actions (`/.github/workflows/deploy.yml`) publica `dist/` automáticamente en GitHub Pages al hacer push a `main`.
-
-URL: https://rahyned.github.io/pixel-editor/
-
-## Paleta
-
-Paleta por defecto (editable en el editor):
-
-| Clave | Color | | Clave | Color |
-|-------|-------|-|-------|-------|
-| `.` | transparente | | `N` | verde |
-| `K` | negro | | `L` | verde claro |
-| `W` | blanco | | `B` | azul |
-| `R` | rojo | | `C` | azul claro |
-| `O` | naranja | | `P` | rosa |
-| `G` | dorado | | `V` | violeta |
-| `Y` | amarillo | | `T` | marrón |
-| `A` | cian | | `H` | marrón claro |
-| `E` | gris | | `F` | gris claro |
-
-Además incluye escala de grises (`0`-`4`) y azules medios (`5`-`8`).
-
-## Estructura
-
-```
-src/
-├── App.jsx               # layout + estado global + atajos
-├── components/
-│   ├── PixelCanvas.jsx   # canvas con herramientas, zoom y selección
-│   ├── Toolbar.jsx       # herramientas, tamaño, transformaciones, undo
-│   ├── Palette.jsx       # paleta editable
-│   ├── LayersPanel.jsx   # capas + opacidad
-│   ├── FramesPanel.jsx   # línea de tiempo + animación
-│   ├── Preview.jsx       # preview animada
-│   ├── CodeOutput.jsx    # generador de código
-│   └── ExportImport.jsx  # export PNG/sheet/SVG/JSON + import
-├── lib/
-│   ├── palette.js        # claves de color + helpers de grilla
-│   ├── composite.js      # fusión de capas con opacidad
-│   ├── tools.js          # matemática de herramientas y transformaciones
-│   ├── export.js         # PNG, sprite-sheet, SVG, JSON
-│   └── import.js         # parseo de sprites y proyectos JSON
-└── state/
-    └── useProject.js     # estado + historial undo/redo
 ```
 
 © 2026 Lautaro |
