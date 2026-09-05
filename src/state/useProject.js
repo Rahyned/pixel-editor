@@ -41,9 +41,9 @@ function withActiveLayerGrid(project, fn) {
   return { ...project, frames };
 }
 
-export function useProject(initialW = 16, initialH = 16) {
+export function useProject(initialW = 16, initialH = 16, initialProject = null) {
   const [state, setState] = useState(() => ({
-    project: makeProject(initialW, initialH),
+    project: initialProject || makeProject(initialW, initialH),
     history: [],
     future: [],
   }));

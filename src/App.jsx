@@ -58,7 +58,7 @@ function loadJson(key, fallback) {
 
 export default function App() {
   const [saved] = useState(loadSavedProject);
-  const p = useProject(saved?.width || 16, saved?.height || 16);
+  const p = useProject(saved?.width || 16, saved?.height || 16, saved);
   const { project, activeFrame } = p;
 
   const [tool, setTool] = useState("pencil");

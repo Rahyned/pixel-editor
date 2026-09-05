@@ -92,17 +92,27 @@ function validFps(f) {
 
 function sanitizeGrid(grid, width, height) {
   const flat = Array(width * height).fill(".");
-  if (Array.isArray(grid)) {
+  if (!Array.isArray(grid) || grid.length === 0) return flat;
+  const first = grid[0];
+  const valid = new Set(Object.keys(PX));
+  if (Array.isArray(first)) {
+    // array de filas (cada fila es un array de chars)
     grid.forEach((row, y) => {
-      if (Array.isArray(row)) {
-        row.forEach((ch, x) => {
-          if (x < width && y < height && Object.keys(PX).includes(ch)) flat[y * width + x] = ch;
-        });
-      } else if (typeof row === "string") {
-        [...row].forEach((ch, x) => {
-          if (x < width && y < height && Object.keys(PX).includes(ch)) flat[y * width + x] = ch;
-        });
-      }
+      row.forEach((ch, x) => {
+        if (x < width && y < height && valid.has(ch)) flat[y * width + x] = ch;
+      });
+    });
+  } else if (typeof first === "string" && first.length > 1) {
+    // array de filas (cada fila es un string)
+    grid.forEach((row, y) => {
+      [...row].forEach((ch, x) => {
+        if (x < width && y < height && valid.has(ch)) flat[y * width + x] = ch;
+      });
+    });
+  } else {
+    // grilla plana (un char por celda) — el formato que guarda el editor
+    grid.forEach((ch, i) => {
+      if (i < flat.length && valid.has(ch)) flat[i] = ch;
     });
   }
   return flat;

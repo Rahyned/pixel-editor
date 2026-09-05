@@ -73,7 +73,17 @@ Editor de sprites **pixel art** en el navegador. Pintá, animá, importá y expo
 ## 🧱 Stack
 
 - **React** 19 + **Vite** 8
-- Deploy automático a **GitHub Pages** vía GitHub Actions
+- Deploy automático a **GitHub Pages** vía GitHub Actions (con tests en el pipeline)
+
+## 🧪 Testing
+
+```bash
+npm test           # unit + component (Vitest, jsdom + canvas mock)
+npm run test:e2e   # E2E con Playwright (Chromium) contra el build
+npm run test:all   # todo junto
+```
+
+Los tests corren también en el CI: cada push a `main` lint-ea, corre los tests y solo deploya si todo pasa.
 
 ---
 
